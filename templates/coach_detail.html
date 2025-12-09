@@ -13,7 +13,20 @@
                 
                 <div class="card-body p-4 text-center">
                     <h3 class="serif-font mb-1">{{ coach.name }}</h3>
-                    <p class="text-muted small mb-3">{{ coach.city }}, {{ coach.state }}</p>
+                    
+                    <p class="text-muted small mb-3">
+                        <i class="bi bi-geo-alt-fill text-danger"></i> {{ coach.city }}, {{ coach.state }}
+                        
+                        {% if coach.travel_radius > 0 %}
+                            <span class="d-block mt-2 badge bg-info bg-opacity-10 text-info border border-info rounded-pill mx-auto" style="width: fit-content;">
+                                <i class="bi bi-bicycle me-1"></i> Travels up to {{ coach.travel_radius }} km
+                            </span>
+                        {% else %}
+                            <span class="d-block mt-2 badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill mx-auto" style="width: fit-content;">
+                                <i class="bi bi-building me-1"></i> Venue Only
+                            </span>
+                        {% endif %}
+                    </p>
                     
                     {% if coach.is_verified %}
                         <div class="badge-verified d-inline-block mb-3">
@@ -32,7 +45,9 @@
                             <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Login to Book</a>
                         {% endif %}
                         
-                        <a href="tel:{{ coach.phone }}" class="btn btn-outline-dark">Contact</a>
+                        <a href="{{ coach.get_whatsapp_url() }}" target="_blank" class="btn btn-success btn-lg">
+                            <i class="bi bi-whatsapp me-2"></i> Chat on WhatsApp
+                        </a>
                     </div>
                 </div>
             </div>
@@ -46,8 +61,10 @@
                 </div>
                 <div class="col-6">
                     <div class="card p-3 shadow-sm border-0 bg-light">
-                        <h4 class="mb-0 fw-bold">{{ coach.rating }}</h4>
-                        <small class="text-muted">Rating</small>
+                        <h4 class="mb-0 fw-bold text-warning">
+                            {{ coach.rating }} <i class="bi bi-star-fill small"></i>
+                        </h4>
+                        <small class="text-muted">Avg Rating</small>
                     </div>
                 </div>
             </div>
@@ -98,21 +115,75 @@
             </div>
         </div>
 
-        {% if achievements %}
-        <h3 class="mb-4 fw-bold">Career Highlights</h3>
-        <div class="row g-3">
-            {% for ach in achievements %}
-            <div class="col-md-6">
-                <div class="d-flex align-items-center bg-white p-3 rounded-4 shadow-sm border">
-                    <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; min-width: 40px;">
-                        <i class="bi bi-trophy-fill"></i>
+        <h3 class="mb-4 fw-bold">Student Reviews ({{ coach.reviews|length }})</h3>
+        
+        {% if current_user.is_authenticated %}
+            {% if can_review %}
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-light">
+                    <h5 class="fw-bold mb-3">Leave a Review</h5>
+                    <p class="small text-success"><i class="bi bi-check-circle-fill"></i> You have completed a session with this coach.</p>
+                    <form action="{{ url_for('add_review', coach_id=coach.id) }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted text-uppercase fw-bold">Rating</label>
+                            <div class="rating-css">
+                                <div class="star-icon">
+                                    <input type="radio" name="rating" value="5" id="rating5" checked>
+                                    <label for="rating5" class="bi bi-star-fill"></label>
+                                    <input type="radio" name="rating" value="4" id="rating4">
+                                    <label for="rating4" class="bi bi-star-fill"></label>
+                                    <input type="radio" name="rating" value="3" id="rating3">
+                                    <label for="rating3" class="bi bi-star-fill"></label>
+                                    <input type="radio" name="rating" value="2" id="rating2">
+                                    <label for="rating2" class="bi bi-star-fill"></label>
+                                    <input type="radio" name="rating" value="1" id="rating1">
+                                    <label for="rating1" class="bi bi-star-fill"></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <textarea name="comment" class="form-control border-0 shadow-sm" rows="3" placeholder="How was your experience?" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-dark rounded-pill px-4">Submit Review</button>
+                    </form>
+                </div>
+            {% else %}
+                {% if current_user.role != 'coach' %}
+                <div class="alert alert-light border shadow-sm rounded-4 mb-4 d-flex align-items-center">
+                    <i class="bi bi-info-circle-fill text-muted me-2 fs-4"></i>
+                    <span class="text-muted small">Reviews open after you complete a session with <strong>{{ coach.name }}</strong>.</span>
+                </div>
+                {% endif %}
+            {% endif %}
+        {% endif %}
+
+        <div class="mb-5">
+            {% for review in coach.reviews|reverse %}
+            <div class="d-flex mb-4 border-bottom pb-4">
+                <div class="flex-shrink-0">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 50px; height: 50px;">
+                        {{ review.student.name[0] }}
                     </div>
-                    <span class="fw-medium text-dark">{{ ach }}</span>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <h6 class="mb-0 fw-bold">{{ review.student.name }}</h6>
+                        <small class="text-muted">{{ review.created_at.strftime('%Y-%m-%d') }}</small>
+                    </div>
+                    <div class="text-warning mb-2 small">
+                        {% for i in range(review.rating) %}
+                            <i class="bi bi-star-fill"></i>
+                        {% endfor %}
+                        {% for i in range(5 - review.rating) %}
+                            <i class="bi bi-star text-muted opacity-25"></i>
+                        {% endfor %}
+                    </div>
+                    <p class="mb-0 text-muted">{{ review.comment }}</p>
                 </div>
             </div>
+            {% else %}
+            <p class="text-muted fst-italic">No reviews yet. Be the first to review!</p>
             {% endfor %}
         </div>
-        {% endif %}
     </div>
 </div>
 
@@ -124,7 +195,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <p class="text-muted small mb-4">You are booking a session with <strong>{{ coach.name }}</strong>. Please fill in the details below.</p>
+                <p class="text-muted small mb-4">You are booking a session with <strong>{{ coach.name }}</strong>.</p>
                 
                 <form action="{{ url_for('book_session', coach_id=coach.id) }}" method="POST">
                     
@@ -140,11 +211,12 @@
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label fw-bold small text-uppercase">Date</label>
-                            <input type="date" name="date" class="form-control bg-light border-0 rounded-3" required min="{{ get_today_date }}">
+                            <input type="date" name="date" id="bookingDate" class="form-control bg-light border-0 rounded-3" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label fw-bold small text-uppercase">Time</label>
-                            <select name="time" class="form-select bg-light border-0 rounded-3" required>
+                            <select name="time" id="bookingTime" class="form-select bg-light border-0 rounded-3" required>
+                                <option value="" selected disabled>Select Time</option>
                                 <option value="06:00 AM">06:00 AM</option>
                                 <option value="07:00 AM">07:00 AM</option>
                                 <option value="08:00 AM">08:00 AM</option>
@@ -157,9 +229,19 @@
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase">Session Location</label>
+                        <input type="text" name="location" class="form-control bg-light border-0 rounded-3" 
+                               placeholder="e.g. My Home Address OR 'Coach's Venue'" required>
+                        {% if coach.travel_radius > 0 %}
+                            <div class="form-text text-success small"><i class="bi bi-check-circle-fill"></i> This coach travels up to {{ coach.travel_radius }}km.</div>
+                        {% else %}
+                            <div class="form-text text-muted small">This coach prefers training at their venue.</div>
+                        {% endif %}
+                    </div>
+
                     <div class="mb-4">
-                        <label class="form-label fw-bold small text-uppercase">Message (Optional)</label>
-                        <textarea name="message" class="form-control bg-light border-0 rounded-3" rows="2" placeholder="Any specific focus areas?"></textarea>
+                        <textarea name="message" class="form-control bg-light border-0 rounded-3" rows="2" placeholder="Any specific instructions?"></textarea>
                     </div>
 
                     <div class="d-grid">
@@ -173,11 +255,63 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // 1. Set the Calendar Minimum to TODAY
         var dateInput = document.querySelector('input[type="date"]');
         if(dateInput) {
             dateInput.min = new Date().toISOString().split("T")[0];
         }
+        
+        // 2. Disable Past Times Logic
+        const timeSelect = document.querySelector('select[name="time"]');
+        
+        dateInput.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            const today = new Date();
+            
+            // Reset "Today" to 00:00:00 for accurate comparison
+            today.setHours(0,0,0,0);
+            selectedDate.setHours(0,0,0,0);
+            
+            const currentHour = new Date().getHours(); 
+            
+            // Map Time Strings to 24h format
+            const timeMap = {
+                "06:00 AM": 6, "07:00 AM": 7, "08:00 AM": 8, "09:00 AM": 9,
+                "04:00 PM": 16, "05:00 PM": 17, "06:00 PM": 18, "07:00 PM": 19
+            };
+
+            const options = timeSelect.options;
+            
+            // Only filter times if the date selected is TODAY
+            if (selectedDate.getTime() === today.getTime()) {
+                for (let i = 0; i < options.length; i++) {
+                    const timeVal = options[i].value;
+                    if (timeMap[timeVal] !== undefined) {
+                        if (timeMap[timeVal] <= currentHour) {
+                            options[i].disabled = true;
+                            options[i].innerText = timeVal + " (Passed)";
+                        } else {
+                            options[i].disabled = false;
+                            options[i].innerText = timeVal.replace(" (Passed)", "");
+                        }
+                    }
+                }
+            } else {
+                // If future date, enable everything
+                for (let i = 0; i < options.length; i++) {
+                    options[i].disabled = false;
+                    options[i].innerText = options[i].value.replace(" (Passed)", "");
+                }
+            }
+        });
     });
 </script>
+
+<style>
+.rating-css input { display: none; }
+.rating-css input + label { font-size: 1.5rem; text-shadow: 1px 1px 0 #ffe400; cursor: pointer; color: #ccc; float: right; transition: all .2s; }
+.rating-css input:checked ~ label, .rating-css label:hover, .rating-css label:hover ~ label { color: #ffc107; text-shadow: none; }
+.star-icon { direction: rtl; display: inline-block; }
+</style>
 
 {% endblock %}

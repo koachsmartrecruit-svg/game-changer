@@ -26,16 +26,21 @@
                     <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}" 
                          class="w-100 rounded-top-4" 
                          style="height: 250px; object-fit: cover;">
+                    
                     {% if coach.is_verified %}
                     <span class="position-absolute bottom-0 start-0 m-3 badge-verified bg-white shadow-sm">
                         Verified Pro
                     </span>
                     {% endif %}
+                    
+                    <span class="position-absolute top-0 end-0 m-3 bg-white px-2 py-1 rounded-3 small fw-bold shadow-sm">
+                        ★ {{ coach.rating }}
+                    </span>
                 </div>
                 
                 <div class="card-body p-4 d-flex flex-column">
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-clay fw-bold text-uppercase small">{{ coach.sport.split(',')[0] }}</span>
+                        <span class="text-primary fw-bold text-uppercase small">{{ coach.sport.split(',')[0] }}</span>
                         <span class="text-muted small"><i class="bi bi-geo-alt"></i> {{ coach.city }}</span>
                     </div>
                     
@@ -47,7 +52,12 @@
                             <span class="d-block small text-muted">Starting from</span>
                             <span class="fw-bold fs-5">₹{{ coach.price_per_session }}</span>
                         </div>
-                        <a href="{{ url_for('coach_detail', slug=coach.slug) }}" class="btn btn-outline-dark btn-sm rounded-pill px-4">Profile</a>
+                        <div class="d-flex gap-2">
+                             <a href="{{ coach.get_whatsapp_url() }}" target="_blank" class="btn btn-success btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Chat on WhatsApp">
+                                <i class="bi bi-whatsapp"></i>
+                            </a>
+                            <a href="{{ url_for('coach_detail', slug=coach.slug) }}" class="btn btn-outline-dark btn-sm rounded-pill px-3">Profile</a>
+                        </div>
                     </div>
                 </div>
             </div>

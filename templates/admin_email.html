@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-dark text-white p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0 serif-font"><i class="bi bi-megaphone-fill me-2 text-warning"></i>Newsletter Blast</h3>
+                            <p class="mb-0 opacity-75 small">Send updates to all subscribed users.</p>
+                        </div>
+                        <div class="text-end">
+                            <h2 class="mb-0">{{ subscriber_count }}</h2>
+                            <small class="opacity-75">Active Subscribers</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-5 bg-light">
+                    <form method="POST">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-uppercase small text-muted">Email Subject</label>
+                            <input type="text" name="subject" class="form-control form-control-lg border-0 shadow-sm" placeholder="e.g., 50% Off Summer Coaching!" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-uppercase small text-muted">Message Body</label>
+                            <textarea name="message" class="form-control border-0 shadow-sm" rows="8" placeholder="Write your update here..." required></textarea>
+                            <div class="form-text">This will be sent as a plain text email to all subscribers.</div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow-sm" onclick="return confirm('Are you sure you want to send this to {{ subscriber_count }} people?');">
+                                <i class="bi bi-send-fill me-2"></i>Send Broadcast
+                            </button>
+                            <a href="{{ url_for('coach_dashboard') }}" class="btn btn-link text-muted text-decoration-none">Cancel and go back</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

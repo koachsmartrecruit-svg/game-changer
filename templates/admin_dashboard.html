@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 serif-font fw-bold">Admin Command Center</h1>
+            <p class="text-muted">Overview of platform performance.</p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin_email') }}" class="btn btn-warning rounded-pill shadow-sm fw-bold">
+                <i class="bi bi-megaphone-fill me-2"></i>Send Newsletter
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-primary text-white h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 text-uppercase small fw-bold mb-1">Total Revenue</h6>
+                            <h2 class="mb-0 fw-bold">₹{{ stats.revenue }}</h2>
+                        </div>
+                        <i class="bi bi-currency-rupee fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase small fw-bold mb-1">Active Users</h6>
+                            <h2 class="mb-0 fw-bold">{{ stats.total_users }}</h2>
+                        </div>
+                        <i class="bi bi-people-fill fs-1 text-primary opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Bookings</h6>
+                            <h2 class="mb-0 fw-bold">{{ stats.total_bookings }}</h2>
+                        </div>
+                        <i class="bi bi-calendar-check-fill fs-1 text-success opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase small fw-bold mb-1">Subscribers</h6>
+                            <h2 class="mb-0 fw-bold">{{ stats.subscribers }}</h2>
+                        </div>
+                        <i class="bi bi-envelope-paper-fill fs-1 text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">Recent Bookings</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">Coach</th>
+                                    <th>Student</th>
+                                    <th>Sport</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in bookings %}
+                                <tr>
+                                    <td class="ps-4 fw-bold">{{ booking.coach.name }}</td>
+                                    <td>{{ booking.student.name }}</td>
+                                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill">{{ booking.sport }}</span></td>
+                                    <td class="small text-muted">{{ booking.booking_date }}</td>
+                                    <td><span class="badge bg-success bg-opacity-10 text-success">Confirmed</span></td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">No bookings yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">Pending Verifications</h5>
+                    <small class="text-muted">Coaches waiting for badge</small>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for coach in pending_coaches %}
+                        <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}" class="rounded-circle me-3" width="40" height="40" style="object-fit: cover;">
+                                <div>
+                                    <h6 class="mb-0 fw-bold">{{ coach.name }}</h6>
+                                    <small class="text-muted">{{ coach.city }}</small>
+                                </div>
+                            </div>
+                            <a href="{{ url_for('admin_verify_coach', coach_id=coach.id) }}" class="btn btn-sm btn-outline-success rounded-pill" onclick="return confirm('Verify this coach?');">
+                                <i class="bi bi-check-lg"></i> Verify
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item text-center py-4 text-muted border-0">
+                            <i class="bi bi-check-circle fs-1 text-success opacity-25 d-block mb-2"></i>
+                            All caught up!
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

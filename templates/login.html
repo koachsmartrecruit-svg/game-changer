@@ -28,9 +28,13 @@
                     <label for="email">Email address</label>
                 </div>
                 <div class="form-floating mb-4">
-                    <input type="password" name="password" class="form-control bg-light border-0 rounded-3" id="pass" placeholder="Password">
-                    <label for="pass">Password</label>
-                </div>
+    <div class="input-group">
+        <input type="password" name="password" class="form-control bg-light border-0 rounded-start-3" id="loginPass" placeholder="Password" required style="height: 58px;">
+        <button class="btn btn-light border-0 rounded-end-3" type="button" onclick="togglePassword('loginPass', this)" style="height: 58px;">
+            <i class="bi bi-eye-slash-fill text-muted"></i>
+        </button>
+    </div>
+</div>
 
                 <button type="submit" class="btn btn-dark w-100 btn-lg rounded-pill mb-4">Sign In</button>
 
