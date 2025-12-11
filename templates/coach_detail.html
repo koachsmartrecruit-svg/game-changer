@@ -2,316 +2,387 @@
 
 {% block content %}
 
-<div class="row g-5 my-3">
+<div class="container py-4 py-lg-5">
 
-    <div class="col-lg-4">
-        <div class="position-sticky" style="top: 100px;">
-            <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4">
-                <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}" 
-                     class="w-100" 
-                     style="height: 400px; object-fit: cover;">
-                
-                <div class="card-body p-4 text-center">
-                    <h3 class="serif-font mb-1">{{ coach.name }}</h3>
-                    
-                    <p class="text-muted small mb-3">
-                        <i class="bi bi-geo-alt-fill text-danger"></i> {{ coach.city }}, {{ coach.state }}
-                        
-                        {% if coach.travel_radius > 0 %}
-                            <span class="d-block mt-2 badge bg-info bg-opacity-10 text-info border border-info rounded-pill mx-auto" style="width: fit-content;">
-                                <i class="bi bi-bicycle me-1"></i> Travels up to {{ coach.travel_radius }} km
-                            </span>
+    <!-- TOP SECTION: Coach header -->
+    <div class="row g-4 mb-4 align-items-center">
+        <div class="col-md-3 text-center text-md-start">
+            {% set display_name = coach.name %}
+            {% if coach.profile_image %}
+                <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}"
+                     class="rounded-4 shadow-sm mb-3"
+                     style="width: 180px; height: 180px; object-fit: cover;"
+                     alt="{{ display_name }}">
+            {% else %}
+                <img src="https://ui-avatars.com/api/?name={{ display_name|urlencode }}&background=random&size=256"
+                     class="rounded-4 shadow-sm mb-3"
+                     style="width: 180px; height: 180px; object-fit: cover;"
+                     alt="{{ display_name }}">
+            {% endif %}
+
+            {% if coach.is_verified %}
+                <div class="d-inline-flex align-items-center gap-1 bg-success bg-opacity-10 text-success px-3 py-1 rounded-pill small">
+                    <i class="bi bi-patch-check-fill"></i>
+                    <span>Verified Pro</span>
+                </div>
+            {% else %}
+                <div class="d-inline-flex align-items-center gap-1 bg-warning bg-opacity-10 text-warning px-3 py-1 rounded-pill small">
+                    <i class="bi bi-shield-exclamation"></i>
+                    <span>Unverified</span>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-6">
+            <h1 class="h3 serif-font mb-1">{{ coach.name }}</h1>
+            {% if coach.tagline %}
+                <p class="lead mb-2">{{ coach.tagline }}</p>
+            {% endif %}
+
+            <div class="d-flex flex-wrap gap-3 align-items-center mb-2">
+                <!-- Rating -->
+                <div class="d-flex align-items-center gap-1">
+                    {% set full_stars = coach.rating|int %}
+                    {% set has_half = (coach.rating - full_stars) >= 0.5 %}
+                    {% for i in range(1, 6) %}
+                        {% if i <= full_stars %}
+                            <i class="bi bi-star-fill text-warning"></i>
+                        {% elif has_half and i == full_stars + 1 %}
+                            <i class="bi bi-star-half text-warning"></i>
                         {% else %}
-                            <span class="d-block mt-2 badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill mx-auto" style="width: fit-content;">
-                                <i class="bi bi-building me-1"></i> Venue Only
-                            </span>
+                            <i class="bi bi-star text-warning"></i>
                         {% endif %}
-                    </p>
-                    
-                    {% if coach.is_verified %}
-                        <div class="badge-verified d-inline-block mb-3">
-                            <i class="bi bi-patch-check-fill text-primary"></i> Verified Instructor
+                    {% endfor %}
+                    <span class="fw-bold ms-1">{{ coach.rating }}</span>
+                    <span class="text-muted small">
+                        ({{ coach.reviews|length }} review{{ '' if coach.reviews|length == 1 else 's' }})
+                    </span>
+                </div>
+
+                <!-- Experience -->
+                {% if coach.experience_years %}
+                    <div class="small text-muted">
+                        <i class="bi bi-award me-1"></i>
+                        {{ coach.experience_years }} year{{ '' if coach.experience_years == 1 else 's' }} experience
+                    </div>
+                {% endif %}
+
+                <!-- Age -->
+                {% if coach.age %}
+                    <div class="small text-muted">
+                        <i class="bi bi-person me-1"></i> Age {{ coach.age }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="d-flex flex-wrap gap-3 small text-muted mb-2">
+                <span>
+                    <i class="bi bi-geo-alt-fill me-1"></i>
+                    {{ coach.city }}{% if coach.state %}, {{ coach.state }}{% endif %}
+                    {% if coach.pincode %} · {{ coach.pincode }}{% endif %}
+                </span>
+
+                {% if coach.travel_radius and coach.travel_radius > 0 %}
+                    <span>
+                        <i class="bi bi-car-front me-1"></i>
+                        Travels up to {{ coach.travel_radius }} km
+                    </span>
+                {% else %}
+                    <span>
+                        <i class="bi bi-building me-1"></i>
+                        Venue Only
+                    </span>
+                {% endif %}
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                {% for sport in coach.get_sports_list() %}
+                    <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-2">
+                        <i class="bi bi-trophy me-1"></i> {{ sport }}
+                    </span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-md-3 text-md-end text-center">
+            {% set price_map = coach.get_price_dict() %}
+            {% if price_map %}
+                {% set min_price = price_map.values()|list|min %}
+                <div class="mb-2">
+                    <span class="text-muted small d-block">Starting at</span>
+                    <span class="h4 mb-0">₹{{ min_price }}</span>
+                    <span class="text-muted small">/ session</span>
+                </div>
+            {% else %}
+                <div class="mb-2">
+                    <span class="text-muted small d-block">Pricing</span>
+                    <span class="h5 mb-0">Contact for rates</span>
+                </div>
+            {% endif %}
+
+            {% if coach.phone %}
+                <a href="{{ coach.get_whatsapp_url() }}" target="_blank"
+                   class="btn btn-success btn-sm rounded-pill w-100 mb-2">
+                    <i class="bi bi-whatsapp me-1"></i> Chat on WhatsApp
+                </a>
+            {% endif %}
+
+            <a href="#booking" class="btn btn-primary btn-sm rounded-pill w-100">
+                Book a Session
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- LEFT: About, Sports & Achievements, Reviews -->
+        <div class="col-lg-8">
+            <!-- Sports & pricing table -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-light border-0 py-3 px-4">
+                    <h5 class="mb-0">Sports & Pricing</h5>
+                </div>
+                <div class="card-body px-4 pb-4 pt-3">
+                    {% if price_map %}
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead class="small text-muted">
+                                    <tr>
+                                        <th>Sport</th>
+                                        <th class="text-end">Price / Session</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for sport, price in price_map.items() %}
+                                        <tr>
+                                            <td>
+                                                <i class="bi bi-trophy me-1 text-primary"></i>
+                                                {{ sport }}
+                                            </td>
+                                            <td class="text-end fw-bold">
+                                                ₹{{ price }}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted small mb-0">
+                            Pricing details are not added yet. Contact the coach for their rates.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Achievements & Specialties -->
+            {% if achievements or specialties %}
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-light border-0 py-3 px-4">
+                    <h5 class="mb-0">Coach Story</h5>
+                </div>
+                <div class="card-body px-4 pb-4 pt-3">
+                    {% if achievements %}
+                        <h6 class="text-muted text-uppercase small fw-bold mb-2">Achievements</h6>
+                        <ul class="mb-3">
+                            {% for item in achievements %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    {% if specialties %}
+                        <h6 class="text-muted text-uppercase small fw-bold mb-2">Specialties</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for spec in specialties %}
+                                <span class="badge rounded-pill bg-dark bg-opacity-10 text-dark">
+                                    {{ spec }}
+                                </span>
+                            {% endfor %}
                         </div>
                     {% endif %}
-
-                    <div class="d-grid gap-2">
-                        {% if current_user.is_authenticated %}
-                            {% if current_user.id != coach.user_id %}
-                                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#bookingModal">Book Session</button>
-                            {% else %}
-                                <button class="btn btn-secondary btn-lg" disabled>This is your profile</button>
-                            {% endif %}
-                        {% else %}
-                            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Login to Book</a>
-                        {% endif %}
-                        
-                        <a href="{{ coach.get_whatsapp_url() }}" target="_blank" class="btn btn-success btn-lg">
-                            <i class="bi bi-whatsapp me-2"></i> Chat on WhatsApp
-                        </a>
-                    </div>
                 </div>
             </div>
-            
-            <div class="row text-center g-2">
-                <div class="col-6">
-                    <div class="card p-3 shadow-sm border-0 bg-light">
-                        <h4 class="mb-0 fw-bold">{{ coach.experience_years }}</h4>
-                        <small class="text-muted">Years Exp.</small>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="card p-3 shadow-sm border-0 bg-light">
-                        <h4 class="mb-0 fw-bold text-warning">
-                            {{ coach.rating }} <i class="bi bi-star-fill small"></i>
-                        </h4>
-                        <small class="text-muted">Avg Rating</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-8">
-        <h1 class="display-4 mb-3 fw-bold">{{ coach.tagline or "Professional Sports Coach" }}</h1>
-        
-        <div class="mb-5">
-            {% for spec in specialties %}
-                <span class="d-inline-block bg-light border border-light rounded-pill px-3 py-1 me-2 mb-2 text-secondary small text-uppercase fw-bold" style="letter-spacing: 1px;">
-                    {{ spec }}
-                </span>
-            {% endfor %}
-        </div>
-
-        <h3 class="mb-4 fw-bold">About the Instructor</h3>
-        <p class="lead text-muted mb-5" style="line-height: 1.8;">
-            With a focus on technique and mental fortitude, {{ coach.name }} brings {{ coach.experience_years }} years of experience to the field. 
-            Training is tailored to individual needs, whether you are a beginner looking to learn the basics or a pro refining your game.
-        </p>
-
-        <div class="card bg-white border-0 shadow-sm rounded-4 p-5 mb-5">
-            <h3 class="mb-4 fw-bold">Session Pricing</h3>
-            <div class="table-responsive">
-                <table class="table table-borderless align-middle">
-                    <thead class="text-uppercase small text-muted border-bottom">
-                        <tr>
-                            <th class="ps-0 pb-3">Sport Program</th>
-                            <th class="text-end pe-0 pb-3">Rate per Session</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% set prices = coach.get_price_dict() %}
-                        {% for sport in coach.get_sports_list() %}
-                        <tr>
-                            <td class="ps-0 py-4">
-                                <span class="h5 fw-bold">{{ sport }}</span>
-                            </td>
-                            <td class="text-end pe-0 py-4">
-                                <span class="h4 text-primary fw-bold">₹{{ prices.get(sport, 'N/A') }}</span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <h3 class="mb-4 fw-bold">Student Reviews ({{ coach.reviews|length }})</h3>
-        
-        {% if current_user.is_authenticated %}
-            {% if can_review %}
-                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-light">
-                    <h5 class="fw-bold mb-3">Leave a Review</h5>
-                    <p class="small text-success"><i class="bi bi-check-circle-fill"></i> You have completed a session with this coach.</p>
-                    <form action="{{ url_for('add_review', coach_id=coach.id) }}" method="POST">
-                        <div class="mb-3">
-                            <label class="form-label small text-muted text-uppercase fw-bold">Rating</label>
-                            <div class="rating-css">
-                                <div class="star-icon">
-                                    <input type="radio" name="rating" value="5" id="rating5" checked>
-                                    <label for="rating5" class="bi bi-star-fill"></label>
-                                    <input type="radio" name="rating" value="4" id="rating4">
-                                    <label for="rating4" class="bi bi-star-fill"></label>
-                                    <input type="radio" name="rating" value="3" id="rating3">
-                                    <label for="rating3" class="bi bi-star-fill"></label>
-                                    <input type="radio" name="rating" value="2" id="rating2">
-                                    <label for="rating2" class="bi bi-star-fill"></label>
-                                    <input type="radio" name="rating" value="1" id="rating1">
-                                    <label for="rating1" class="bi bi-star-fill"></label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <textarea name="comment" class="form-control border-0 shadow-sm" rows="3" placeholder="How was your experience?" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-dark rounded-pill px-4">Submit Review</button>
-                    </form>
-                </div>
-            {% else %}
-                {% if current_user.role != 'coach' %}
-                <div class="alert alert-light border shadow-sm rounded-4 mb-4 d-flex align-items-center">
-                    <i class="bi bi-info-circle-fill text-muted me-2 fs-4"></i>
-                    <span class="text-muted small">Reviews open after you complete a session with <strong>{{ coach.name }}</strong>.</span>
-                </div>
-                {% endif %}
             {% endif %}
-        {% endif %}
 
-        <div class="mb-5">
-            {% for review in coach.reviews|reverse %}
-            <div class="d-flex mb-4 border-bottom pb-4">
-                <div class="flex-shrink-0">
-                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 50px; height: 50px;">
-                        {{ review.student.name[0] }}
-                    </div>
+            <!-- Reviews -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4" id="reviews">
+                <div class="card-header bg-light border-0 py-3 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Reviews</h5>
+                    <span class="small text-muted">
+                        {{ coach.reviews|length }} review{{ '' if coach.reviews|length == 1 else 's' }}
+                    </span>
                 </div>
-                <div class="flex-grow-1 ms-3">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <h6 class="mb-0 fw-bold">{{ review.student.name }}</h6>
-                        <small class="text-muted">{{ review.created_at.strftime('%Y-%m-%d') }}</small>
-                    </div>
-                    <div class="text-warning mb-2 small">
-                        {% for i in range(review.rating) %}
-                            <i class="bi bi-star-fill"></i>
-                        {% endfor %}
-                        {% for i in range(5 - review.rating) %}
-                            <i class="bi bi-star text-muted opacity-25"></i>
-                        {% endfor %}
-                    </div>
-                    <p class="mb-0 text-muted">{{ review.comment }}</p>
-                </div>
-            </div>
-            {% else %}
-            <p class="text-muted fst-italic">No reviews yet. Be the first to review!</p>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Book a Session</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="text-muted small mb-4">You are booking a session with <strong>{{ coach.name }}</strong>.</p>
-                
-                <form action="{{ url_for('book_session', coach_id=coach.id) }}" method="POST">
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-uppercase">Select Sport</label>
-                        <select name="sport" class="form-select bg-light border-0 rounded-3" required>
-                            {% for sport in coach.get_sports_list() %}
-                                <option value="{{ sport }}">{{ sport }}</option>
+                <div class="card-body px-4 pb-4 pt-3">
+                    {% if coach.reviews %}
+                        <div class="list-group list-group-flush">
+                            {% for review in coach.reviews|sort(attribute='created_at', reverse=True) %}
+                                <div class="list-group-item px-0 py-3 border-0 border-bottom">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <div>
+                                            <strong>{{ review.student.name }}</strong>
+                                            <div class="small text-muted">
+                                                {{ review.created_at.strftime('%d %b %Y') }}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            {% for i in range(1, 6) %}
+                                                {% if i <= review.rating %}
+                                                    <i class="bi bi-star-fill text-warning small"></i>
+                                                {% else %}
+                                                    <i class="bi bi-star text-warning small"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% if review.comment %}
+                                        <p class="mb-0 small">{{ review.comment }}</p>
+                                    {% endif %}
+                                </div>
                             {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label fw-bold small text-uppercase">Date</label>
-                            <input type="date" name="date" id="bookingDate" class="form-control bg-light border-0 rounded-3" required>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label fw-bold small text-uppercase">Time</label>
-                            <select name="time" id="bookingTime" class="form-select bg-light border-0 rounded-3" required>
-                                <option value="" selected disabled>Select Time</option>
-                                <option value="06:00 AM">06:00 AM</option>
-                                <option value="07:00 AM">07:00 AM</option>
-                                <option value="08:00 AM">08:00 AM</option>
-                                <option value="09:00 AM">09:00 AM</option>
-                                <option value="04:00 PM">04:00 PM</option>
-                                <option value="05:00 PM">05:00 PM</option>
-                                <option value="06:00 PM">06:00 PM</option>
-                                <option value="07:00 PM">07:00 PM</option>
-                            </select>
-                        </div>
-                    </div>
+                    {% else %}
+                        <p class="text-muted small mb-0">
+                            No reviews yet. Be the first to book and share your experience.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-uppercase">Session Location</label>
-                        <input type="text" name="location" class="form-control bg-light border-0 rounded-3" 
-                               placeholder="e.g. My Home Address OR 'Coach's Venue'" required>
-                        {% if coach.travel_radius > 0 %}
-                            <div class="form-text text-success small"><i class="bi bi-check-circle-fill"></i> This coach travels up to {{ coach.travel_radius }}km.</div>
-                        {% else %}
-                            <div class="form-text text-muted small">This coach prefers training at their venue.</div>
-                        {% endif %}
-                    </div>
+            <!-- Add Review Form -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-light border-0 py-3 px-4">
+                    <h6 class="mb-0">Write a Review</h6>
+                </div>
+                <div class="card-body px-4 pb-4 pt-3">
+                    {% if not current_user.is_authenticated %}
+                        <p class="small mb-2">
+                            <a href="{{ url_for('login') }}?next={{ request.path }}" class="fw-bold">
+                                Log in
+                            </a> after your session to leave a review.
+                        </p>
+                    {% elif current_user.role == 'coach' %}
+                        <p class="small text-muted mb-0">
+                            Coaches cannot review other coaches.
+                        </p>
+                    {% elif can_review %}
+                        <form method="POST" action="{{ url_for('add_review', coach_id=coach.id) }}">
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Rating</label>
+                                <select name="rating" class="form-select form-select-sm" required>
+                                    <option value="">Select rating</option>
+                                    {% for i in range(5, 0, -1) %}
+                                        <option value="{{ i }}">{{ i }} ★</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Your feedback (optional)</label>
+                                <textarea name="comment" rows="3"
+                                          class="form-control bg-light border-0 rounded-3"
+                                          placeholder="Share how the session helped you..."></textarea>
+                            </div>
+                            <button type="submit"
+                                    class="btn btn-outline-primary btn-sm rounded-pill px-4">
+                                Submit Review
+                            </button>
+                        </form>
+                    {% else %}
+                        <p class="small text-muted mb-0">
+                            You’ll be able to review Coach {{ coach.name }} after you complete a confirmed session.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
 
-                    <div class="mb-4">
-                        <textarea name="message" class="form-control bg-light border-0 rounded-3" rows="2" placeholder="Any specific instructions?"></textarea>
-                    </div>
+        <!-- RIGHT: Booking card -->
+        <div class="col-lg-4" id="booking">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-primary bg-opacity-10 border-0 py-3 px-4">
+                    <h5 class="mb-0 text-primary">Book a Session</h5>
+                    <small class="text-muted">Secure your slot with {{ coach.name }}</small>
+                </div>
+                <div class="card-body px-4 pb-4 pt-3">
+                    {% if not current_user.is_authenticated %}
+                        <p class="small mb-3">
+                            Please <a href="{{ url_for('login') }}?next={{ request.path }}" class="fw-bold">
+                                log in
+                            </a> or
+                            <a href="{{ url_for('register') }}" class="fw-bold">create an account</a>
+                            to book a session.
+                        </p>
+                    {% elif current_user.role == 'coach' %}
+                        <p class="small text-muted mb-0">
+                            Coaches cannot book sessions from coach profiles. Use a hirer/student account to book.
+                        </p>
+                    {% else %}
+                        <form method="POST" action="{{ url_for('book_session', coach_id=coach.id) }}">
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Sport</label>
+                                <select name="sport" class="form-select form-select-sm" required>
+                                    <option value="">Select sport</option>
+                                    {% for sport in coach.get_sports_list() %}
+                                        <option value="{{ sport }}">{{ sport }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary rounded-pill py-2 fw-bold">Confirm Booking</button>
-                    </div>
-                </form>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Date</label>
+                                <input type="date" name="date" class="form-control form-control-sm bg-light border-0" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Preferred Time</label>
+                                <select name="time" class="form-select form-select-sm" required>
+                                    <option value="">Select time slot</option>
+                                    <option>06:00 AM</option>
+                                    <option>07:00 AM</option>
+                                    <option>08:00 AM</option>
+                                    <option>04:00 PM</option>
+                                    <option>05:00 PM</option>
+                                    <option>06:00 PM</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Location (optional)</label>
+                                <input type="text" name="location"
+                                       class="form-control form-control-sm bg-light border-0"
+                                       placeholder="Academy ground / Turf name / Landmark">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Note for Coach (optional)</label>
+                                <textarea name="message" rows="3"
+                                          class="form-control form-control-sm bg-light border-0"
+                                          placeholder="Share level, age, or anything important..."></textarea>
+                            </div>
+
+                            <button type="submit"
+                                    class="btn btn-primary w-100 rounded-pill">
+                                Confirm Booking
+                            </button>
+
+                            <p class="small text-muted mt-2 mb-0">
+                                You’ll see your booking under <strong>My Schedule</strong> in your dashboard.
+                            </p>
+                        </form>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // 1. Set the Calendar Minimum to TODAY
-        var dateInput = document.querySelector('input[type="date"]');
-        if(dateInput) {
-            dateInput.min = new Date().toISOString().split("T")[0];
+    // Prevent selecting past dates on the booking form
+    document.addEventListener("DOMContentLoaded", function () {
+        const dateInput = document.querySelector('input[name="date"]');
+        if (dateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.min = today;
         }
-        
-        // 2. Disable Past Times Logic
-        const timeSelect = document.querySelector('select[name="time"]');
-        
-        dateInput.addEventListener('change', function() {
-            const selectedDate = new Date(this.value);
-            const today = new Date();
-            
-            // Reset "Today" to 00:00:00 for accurate comparison
-            today.setHours(0,0,0,0);
-            selectedDate.setHours(0,0,0,0);
-            
-            const currentHour = new Date().getHours(); 
-            
-            // Map Time Strings to 24h format
-            const timeMap = {
-                "06:00 AM": 6, "07:00 AM": 7, "08:00 AM": 8, "09:00 AM": 9,
-                "04:00 PM": 16, "05:00 PM": 17, "06:00 PM": 18, "07:00 PM": 19
-            };
-
-            const options = timeSelect.options;
-            
-            // Only filter times if the date selected is TODAY
-            if (selectedDate.getTime() === today.getTime()) {
-                for (let i = 0; i < options.length; i++) {
-                    const timeVal = options[i].value;
-                    if (timeMap[timeVal] !== undefined) {
-                        if (timeMap[timeVal] <= currentHour) {
-                            options[i].disabled = true;
-                            options[i].innerText = timeVal + " (Passed)";
-                        } else {
-                            options[i].disabled = false;
-                            options[i].innerText = timeVal.replace(" (Passed)", "");
-                        }
-                    }
-                }
-            } else {
-                // If future date, enable everything
-                for (let i = 0; i < options.length; i++) {
-                    options[i].disabled = false;
-                    options[i].innerText = options[i].value.replace(" (Passed)", "");
-                }
-            }
-        });
     });
 </script>
-
-<style>
-.rating-css input { display: none; }
-.rating-css input + label { font-size: 1.5rem; text-shadow: 1px 1px 0 #ffe400; cursor: pointer; color: #ccc; float: right; transition: all .2s; }
-.rating-css input:checked ~ label, .rating-css label:hover, .rating-css label:hover ~ label { color: #ffc107; text-shadow: none; }
-.star-icon { direction: rtl; display: inline-block; }
-</style>
 
 {% endblock %}

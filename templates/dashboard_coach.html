@@ -3,7 +3,7 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
             <div>
                 {% if current_user.role == 'coach' %}
                     <h1 class="h2 serif-font mb-0">Coach Studio</h1>
@@ -16,18 +16,56 @@
                     <p class="text-muted">Track your upcoming training sessions.</p>
                 {% endif %}
             </div>
-            
-            {% if current_user.role == 'coach' and coach %}
-            <a href="{{ url_for('coach_detail', slug=coach.slug) }}" target="_blank" class="btn btn-outline-dark btn-sm rounded-pill px-4">
-                View Public Page <i class="bi bi-arrow-up-right ms-1"></i>
-            </a>
-            {% endif %}
+
+            <div class="d-flex gap-2">
+                {% if current_user.role == 'coach' %}
+                    <a href="{{ url_for('coach_availability') }}" class="btn btn-dark btn-sm rounded-pill px-4">
+                        <i class="bi bi-clock me-1"></i> Availability
+                    </a>
+                    {% if coach %}
+                        <a href="{{ url_for('coach_detail', slug=coach.slug) }}" target="_blank"
+                           class="btn btn-outline-dark btn-sm rounded-pill px-4">
+                            View Public Page <i class="bi bi-arrow-up-right ms-1"></i>
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <a href="{{ url_for('coaches') }}" class="btn btn-outline-dark btn-sm rounded-pill px-4">
+                        Find Coaches
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="d-flex justify-content-end">
+            <div class="btn-group btn-group-sm" role="group">
+                <a href="{{ url_for('coach_dashboard', filter='all') }}"
+                   class="btn btn-outline-secondary {% if booking_filter == 'all' %}active{% endif %}">
+                    All
+                </a>
+                <a href="{{ url_for('coach_dashboard', filter='pending') }}"
+                   class="btn btn-outline-secondary {% if booking_filter == 'pending' %}active{% endif %}">
+                    Pending
+                </a>
+                <a href="{{ url_for('coach_dashboard', filter='confirmed') }}"
+                   class="btn btn-outline-secondary {% if booking_filter == 'confirmed' %}active{% endif %}">
+                    Confirmed
+                </a>
+                <a href="{{ url_for('coach_dashboard', filter='rejected') }}"
+                   class="btn btn-outline-secondary {% if booking_filter == 'rejected' %}active{% endif %}">
+                    Rejected
+                </a>
+                <a href="{{ url_for('coach_dashboard', filter='upcoming') }}"
+                   class="btn btn-outline-secondary {% if booking_filter == 'upcoming' %}active{% endif %}">
+                    Upcoming
+                </a>
+            </div>
         </div>
     </div>
 </div>
 
 <div class="row g-4 mb-5">
-    
+    <!-- MY SCHEDULE (Bookings I made) -->
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
             <div class="card-header bg-primary bg-opacity-10 border-0 pt-4 px-4 pb-3">
@@ -42,39 +80,57 @@
             <div class="card-body p-0">
                 {% if my_bookings %}
                     <div class="list-group list-group-flush">
-                    {% for booking in my_bookings %}
-                        <div class="list-group-item p-3 border-0 border-bottom">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-light rounded-3 text-center p-2 me-3" style="min-width: 60px;">
-                                    <span class="d-block fw-bold small text-uppercase">{{ booking.booking_date.strftime('%b') }}</span>
-                                    <span class="d-block h5 mb-0 fw-bold">{{ booking.booking_date.day }}</span>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-0 fw-bold">{{ booking.sport }}</h6>
-                                    <small class="text-muted">
-                                        <i class="bi bi-clock me-1"></i>{{ booking.booking_time }} 
-                                        with <strong>{{ booking.coach.name }}</strong>
-                                    </small>
-                                    <div class="small text-muted mt-1">
-                                        <i class="bi bi-geo-alt-fill me-1"></i> {{ booking.location or 'Venue' }}
+                        {% for booking in my_bookings %}
+                            <div class="list-group-item p-3 border-0 border-bottom">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-3 text-center p-2 me-3" style="min-width: 60px;">
+                                        <span class="d-block fw-bold small text-uppercase">
+                                            {{ booking.booking_date.strftime('%b') }}
+                                        </span>
+                                        <span class="d-block h5 mb-0 fw-bold">
+                                            {{ booking.booking_date.day }}
+                                        </span>
                                     </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0 fw-bold">{{ booking.sport }}</h6>
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock me-1"></i>{{ booking.booking_time }}
+                                            with <strong>{{ booking.coach.name }}</strong>
+                                        </small>
+                                        <div class="small text-muted mt-1">
+                                            <i class="bi bi-geo-alt-fill me-1"></i>
+                                            {{ booking.location or 'Venue' }}
+                                        </div>
+                                    </div>
+                                    <span class="badge
+                                        {% if booking.status == 'Confirmed' %}
+                                            bg-success bg-opacity-10 text-success
+                                        {% elif booking.status == 'Rejected' %}
+                                            bg-danger bg-opacity-10 text-danger
+                                        {% else %}
+                                            bg-warning bg-opacity-10 text-warning
+                                        {% endif %}
+                                        rounded-pill px-3">
+                                        {{ booking.status }}
+                                    </span>
                                 </div>
-                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Confirmed</span>
                             </div>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
                     </div>
                 {% else %}
                     <div class="text-center p-5">
                         <i class="bi bi-journal-x fs-1 text-muted opacity-25 mb-2"></i>
-                        <p class="text-muted small">No upcoming classes booked.</p>
-                        <a href="{{ url_for('coaches') }}" class="btn btn-sm btn-primary rounded-pill px-3">Find a Coach</a>
+                        <p class="text-muted small">No classes match this filter.</p>
+                        <a href="{{ url_for('coaches') }}" class="btn btn-sm btn-primary rounded-pill px-3">
+                            Find a Coach
+                        </a>
                     </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
+    <!-- CLIENT BOOKINGS (For coaches) -->
     {% if current_user.role == 'coach' %}
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
@@ -90,36 +146,78 @@
             <div class="card-body p-0">
                 {% if received_bookings %}
                     <div class="list-group list-group-flush">
-                    {% for booking in received_bookings %}
-                        <div class="list-group-item p-3 border-0 border-bottom">
-                            <div class="d-flex align-items-start">
-                                <img src="https://ui-avatars.com/api/?name={{ booking.student.name }}&background=random" class="rounded-circle me-3" width="40">
-                                <div class="flex-grow-1">
-                                    <div class="d-flex justify-content-between">
-                                        <h6 class="mb-0 fw-bold">{{ booking.student.name }}</h6>
-                                        <small class="text-muted fw-bold">{{ booking.booking_date.strftime('%d %b') }} @ {{ booking.booking_time }}</small>
-                                    </div>
-                                    <p class="small text-muted mb-1">{{ booking.sport }} Session</p>
-                                    
-                                    <div class="d-flex align-items-center small text-dark mb-2 p-2 bg-light rounded-2 border">
-                                        <i class="bi bi-geo-alt-fill text-danger me-2"></i>
-                                        <strong>{{ booking.location or 'No location specified' }}</strong>
-                                    </div>
-
-                                    {% if booking.message %}
-                                        <div class="small text-secondary fst-italic mt-1">
-                                            Note: "{{ booking.message }}"
+                        {% for booking in received_bookings %}
+                            <div class="list-group-item p-3 border-0 border-bottom">
+                                <div class="d-flex align-items-start">
+                                    <img src="https://ui-avatars.com/api/?name={{ booking.student.name }}&background=random"
+                                         class="rounded-circle me-3" width="40" alt="{{ booking.student.name }}">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="mb-0 fw-bold">{{ booking.student.name }}</h6>
+                                            <small class="text-muted fw-bold">
+                                                {{ booking.booking_date.strftime('%d %b') }} @ {{ booking.booking_time }}
+                                            </small>
                                         </div>
-                                    {% endif %}
+                                        <p class="small text-muted mb-1">{{ booking.sport }} Session</p>
+
+                                        <div class="d-flex align-items-center small text-dark mb-2 p-2 bg-light rounded-2 border">
+                                            <i class="bi bi-geo-alt-fill text-danger me-2"></i>
+                                            <strong>{{ booking.location or 'No location specified' }}</strong>
+                                        </div>
+
+                                        {% if booking.message %}
+                                            <div class="small text-secondary fst-italic mt-1">
+                                                Note: "{{ booking.message }}"
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="d-flex align-items-center mt-2">
+                                            <!-- Status badge -->
+                                            <span class="badge
+                                                {% if booking.status == 'Confirmed' %}
+                                                    bg-success bg-opacity-10 text-success
+                                                {% elif booking.status == 'Rejected' %}
+                                                    bg-danger bg-opacity-10 text-danger
+                                                {% else %}
+                                                    bg-warning bg-opacity-10 text-warning
+                                                {% endif %}
+                                                rounded-pill px-3 me-2">
+                                                {{ booking.status }}
+                                            </span>
+
+                                            <!-- Action buttons only for Pending -->
+                                            {% if booking.status == 'Pending' %}
+                                                <form method="POST"
+                                                      action="{{ url_for('update_booking_status', booking_id=booking.id) }}"
+                                                      class="d-inline-block me-1">
+                                                    <input type="hidden" name="status" value="Confirmed">
+                                                    <button type="submit"
+                                                            class="btn btn-success btn-sm rounded-pill px-3">
+                                                        Accept
+                                                    </button>
+                                                </form>
+
+                                                <form method="POST"
+                                                      action="{{ url_for('update_booking_status', booking_id=booking.id) }}"
+                                                      class="d-inline-block">
+                                                    <input type="hidden" name="status" value="Rejected">
+                                                    <button type="submit"
+                                                            class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                                                        Reject
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
                     </div>
                 {% else %}
                     <div class="text-center p-5">
                         <i class="bi bi-inbox fs-1 text-muted opacity-25 mb-2"></i>
-                        <p class="text-muted small">No client bookings yet.</p>
+                        <p class="text-muted small">No bookings match this filter.</p>
                         <small class="text-muted opacity-50">Share your profile to get started!</small>
                     </div>
                 {% endif %}
@@ -130,47 +228,62 @@
 </div>
 
 <div class="row">
+    <!-- LEFT SIDEBAR: PROFILE / VERIFICATION -->
     <div class="col-lg-4 mb-4">
         <div class="card border-0 shadow-sm rounded-4 p-4 text-center mb-4 position-sticky" style="top: 20px;">
+            {% set display_name = coach.name if coach else current_user.name %}
             <div class="position-relative d-inline-block mb-3">
                 {% if coach and coach.profile_image %}
-                    <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}" 
-                         class="rounded-circle shadow-sm" 
-                         style="width: 120px; height: 120px; object-fit: cover;">
+                    <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}"
+                         class="rounded-circle shadow-sm"
+                         style="width: 120px; height: 120px; object-fit: cover;"
+                         alt="{{ display_name }}">
                 {% else %}
-                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto" 
-                         style="width: 120px; height: 120px; font-size: 2.5rem; color: var(--primary-dark);">
-                        {{ current_user.name[0] }}
-                    </div>
+                    <img src="https://ui-avatars.com/api/?name={{ display_name|urlencode }}&background=random&size=128"
+                         class="rounded-circle shadow-sm"
+                         style="width: 120px; height: 120px; object-fit: cover;"
+                         alt="{{ display_name }}">
                 {% endif %}
             </div>
+
             <h4 class="mb-1">{{ current_user.name }}</h4>
             <p class="text-muted small">{{ current_user.email }}</p>
-            
+
             <hr class="opacity-10 my-3">
-            
+
             {% if current_user.role == 'coach' %}
                 {% if coach and coach.is_verified %}
                     <div class="bg-success bg-opacity-10 text-success p-3 rounded-3">
                         <i class="bi bi-patch-check-fill fs-5 d-block mb-1"></i>
                         <span class="fw-bold small text-uppercase">Verified Account</span>
                     </div>
-                {% else %}
+                {% elif coach %}
                     <div class="bg-warning bg-opacity-10 text-warning p-3 rounded-3 mb-3">
                         <i class="bi bi-shield-exclamation fs-4 d-block mb-1"></i>
                         <span class="fw-bold small text-uppercase d-block">Unverified</span>
                         <small class="text-dark opacity-75">Unlock the verified badge.</small>
                     </div>
-                    
+
                     <button id="sendOtpBtn" class="btn btn-dark w-100 mb-2 rounded-pill">Send OTP</button>
                     <p id="otpMessage" class="small text-success fw-bold"></p>
 
                     <form action="{{ url_for('verify_coach') }}" method="POST" class="mt-2">
                         <div class="input-group">
-                            <input type="text" name="code" class="form-control" placeholder="Enter Code" required style="border-radius: 20px 0 0 20px;">
-                            <button class="btn btn-primary" type="submit" style="border-radius: 0 20px 20px 0;">Verify</button>
+                            <input type="text" name="code" class="form-control" placeholder="Enter Code" required
+                                   style="border-radius: 20px 0 0 20px;">
+                            <button class="btn btn-primary" type="submit"
+                                    style="border-radius: 0 20px 20px 0;">Verify</button>
                         </div>
                     </form>
+                {% else %}
+                    <div class="bg-light p-3 rounded-3">
+                        <span class="fw-bold small text-uppercase text-muted d-block mb-1">
+                            Coach Profile Not Created
+                        </span>
+                        <small class="text-muted">
+                            Fill your professional details below to unlock your public page and verification.
+                        </small>
+                    </div>
                 {% endif %}
             {% else %}
                 <div class="bg-light p-3 rounded-3">
@@ -182,56 +295,69 @@
         </div>
     </div>
 
+    <!-- RIGHT SIDE: FORM -->
     <div class="col-lg-8">
         <form method="POST" enctype="multipart/form-data">
             <div class="card border-0 shadow-sm rounded-4 p-5">
-                
                 <h4 class="serif-font mb-4">Account Details</h4>
-                
+
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <label class="form-label small text-uppercase fw-bold text-muted">Full Name</label>
-                        <input type="text" name="name" class="form-control form-control-lg bg-light border-0 rounded-3" value="{{ coach.name if coach else current_user.name }}">
+                        <input type="text" name="name"
+                               class="form-control form-control-lg bg-light border-0 rounded-3"
+                               value="{{ coach.name if coach else current_user.name }}">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small text-uppercase fw-bold text-muted">Profile Photo</label>
-                        <input type="file" name="profile_image" class="form-control form-control-lg bg-light border-0 rounded-3">
+                        <input type="file" name="profile_image"
+                               class="form-control form-control-lg bg-light border-0 rounded-3">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small text-muted">City</label>
-                        <input type="text" name="city" class="form-control bg-light border-0" value="{{ coach.city if coach else current_user.city }}" required>
+                        <input type="text" name="city" class="form-control bg-light border-0"
+                               value="{{ coach.city if coach else current_user.city }}" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small text-muted">State</label>
-                        <input type="text" name="state" class="form-control bg-light border-0" value="{{ coach.state if coach else '' }}">
+                        <input type="text" name="state" class="form-control bg-light border-0"
+                               value="{{ coach.state if coach else '' }}">
                     </div>
                 </div>
 
                 {% if current_user.role == 'coach' %}
                     <hr class="my-5 opacity-10">
                     <h4 class="serif-font mb-4">Professional Profile</h4>
-                    
+
                     <div class="mb-4">
                         <label class="form-label small text-uppercase fw-bold text-muted">Headline</label>
-                        <input type="text" name="tagline" class="form-control form-control-lg bg-light border-0 rounded-3" 
-                               placeholder="e.g. Elite Tennis Coach for Junior Pros" value="{{ coach.tagline if coach else '' }}">
+                        <input type="text" name="tagline"
+                               class="form-control form-control-lg bg-light border-0 rounded-3"
+                               placeholder="e.g. Elite Tennis Coach for Junior Pros"
+                               value="{{ coach.tagline if coach else '' }}">
                     </div>
 
                     <div class="row g-4 mb-5">
                         <div class="col-md-2">
                             <label class="form-label small text-muted">Age</label>
-                            <input type="number" name="age" class="form-control bg-light border-0" value="{{ coach.age if coach else '' }}">
+                            <input type="number" name="age"
+                                   class="form-control bg-light border-0"
+                                   value="{{ coach.age if coach else '' }}">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small text-muted">Exp (Yrs)</label>
-                            <input type="number" name="experience_years" class="form-control bg-light border-0" value="{{ coach.experience_years if coach else '' }}">
+                            <input type="number" name="experience_years"
+                                   class="form-control bg-light border-0"
+                                   value="{{ coach.experience_years if coach else '' }}">
                         </div>
-                        
+
                         <div class="col-md-4">
                             <label class="form-label small text-muted">Travel Radius (Kms)</label>
                             <div class="input-group">
-                                <input type="number" name="travel_radius" class="form-control bg-light border-0" 
-                                       value="{{ coach.travel_radius if coach else '0' }}" placeholder="0">
+                                <input type="number" name="travel_radius"
+                                       class="form-control bg-light border-0"
+                                       value="{{ coach.travel_radius if coach else '0' }}"
+                                       placeholder="0">
                                 <span class="input-group-text bg-light border-0 text-muted small">km</span>
                             </div>
                             <div class="form-text" style="font-size: 0.7rem;">Enter 0 for Venue Only.</div>
@@ -239,11 +365,15 @@
 
                         <div class="col-md-4">
                             <label class="form-label small text-muted">Phone (WhatsApp)</label>
-                            <input type="text" name="phone" class="form-control bg-light border-0" value="{{ coach.phone if coach else '' }}">
+                            <input type="text" name="phone"
+                                   class="form-control bg-light border-0"
+                                   value="{{ coach.phone if coach else '' }}">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small text-muted">Pincode</label>
-                            <input type="text" name="pincode" class="form-control bg-light border-0" value="{{ coach.pincode if coach else '' }}">
+                            <input type="text" name="pincode"
+                                   class="form-control bg-light border-0"
+                                   value="{{ coach.pincode if coach else '' }}">
                         </div>
                     </div>
 
@@ -252,19 +382,23 @@
                         <div class="row g-3">
                             {% set current_sports = coach.get_sports_list() if coach else [] %}
                             {% set price_map = coach.get_price_dict() if coach else {} %}
-                            
+
                             {% for sport in sports_list %}
-                            <div class="col-md-6">
-                                <div class="d-flex align-items-center bg-white p-2 rounded-3 shadow-sm border">
-                                    <div class="form-check ms-2 mb-0">
-                                        <input class="form-check-input" type="checkbox" name="sports" value="{{ sport }}" id="chk_{{loop.index}}"
-                                               {% if sport in current_sports %}checked{% endif %}>
-                                        <label class="form-check-label fw-bold ms-2" for="chk_{{loop.index}}">{{ sport }}</label>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center bg-white p-2 rounded-3 shadow-sm border">
+                                        <div class="form-check ms-2 mb-0">
+                                            <input class="form-check-input" type="checkbox"
+                                                   name="sports" value="{{ sport }}" id="chk_{{ loop.index }}"
+                                                   {% if sport in current_sports %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold ms-2"
+                                                   for="chk_{{ loop.index }}">{{ sport }}</label>
+                                        </div>
+                                        <input type="number" name="price_{{ sport }}"
+                                               class="form-control form-control-sm border-0 bg-light ms-auto text-end"
+                                               placeholder="₹ Price" style="max-width: 80px;"
+                                               value="{{ price_map.get(sport, '') }}">
                                     </div>
-                                    <input type="number" name="price_{{ sport }}" class="form-control form-control-sm border-0 bg-light ms-auto text-end" 
-                                           placeholder="₹ Price" style="max-width: 80px;" value="{{ price_map.get(sport, '') }}">
                                 </div>
-                            </div>
                             {% endfor %}
                         </div>
                     </div>
@@ -272,15 +406,21 @@
                     <h4 class="serif-font mb-4">Bio & Achievements</h4>
                     <div class="mb-3">
                         <label class="form-label small text-muted">Achievements (One per line)</label>
-                        <textarea name="achievements" class="form-control bg-light border-0 rounded-3" rows="4">{{ coach.achievements if coach else '' }}</textarea>
+                        <textarea name="achievements"
+                                  class="form-control bg-light border-0 rounded-3"
+                                  rows="4">{{ coach.achievements if coach else '' }}</textarea>
                     </div>
                     <div class="mb-4">
                         <label class="form-label small text-muted">Specialties (Comma separated)</label>
-                        <input type="text" name="specialties" class="form-control bg-light border-0 rounded-3" value="{{ coach.specialties if coach else '' }}">
+                        <input type="text" name="specialties"
+                               class="form-control bg-light border-0 rounded-3"
+                               value="{{ coach.specialties if coach else '' }}">
                     </div>
                 {% endif %}
 
-                <button type="submit" class="btn btn-primary btn-lg rounded-pill w-100">Save Changes</button>
+                <button type="submit" class="btn btn-primary btn-lg rounded-pill w-100">
+                    Save Changes
+                </button>
             </div>
         </form>
     </div>
@@ -293,13 +433,17 @@
         const btn = this;
         btn.innerHTML = 'Sending...';
         btn.disabled = true;
-        
+
         fetch("{{ url_for('send_otp') }}", { method: "POST" })
-        .then(r => r.json())
-        .then(data => {
-            btn.innerHTML = 'OTP Sent';
-            document.getElementById('otpMessage').innerText = "Check email!";
-        });
+            .then(r => r.json())
+            .then(data => {
+                btn.innerHTML = 'OTP Sent';
+                document.getElementById('otpMessage').innerText = "Check email!";
+            })
+            .catch(() => {
+                btn.innerHTML = 'Send OTP';
+                btn.disabled = false;
+            });
     });
 </script>
 {% endif %}

@@ -41,12 +41,12 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "dev-secret-key-change-this"
 
 # ---- EMAIL CONFIGURATION (GMAIL) ----
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")
-app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
-app.config['MAIL_DEFAULT_SENDER'] = 'sudiksha746@gmail.com'
+app.config["MAIL_SERVER"] = "smtp.gmail.com"
+app.config["MAIL_PORT"] = 587
+app.config["MAIL_USE_TLS"] = True
+app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+app.config["MAIL_DEFAULT_SENDER"] = "sudiksha746@gmail.com"
 
 mail = Mail(app)
 
@@ -63,10 +63,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # --- FIX FOR SSL DISCONNECTS ---
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,  # Checks if connection is alive before using it
-    "pool_recycle": 300,    # Refreshes connection every 5 minutes
+    "pool_recycle": 300,  # Refreshes connection every 5 minutes
 }
 
-# Initialize DB exactly once here
+# Initialize DB
 db = SQLAlchemy(app)
 
 # ---- File Upload Configuration ----
@@ -112,18 +112,20 @@ def allowed_file(filename):
 # ---------------------------------
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    coach_id = db.Column(db.Integer, db.ForeignKey('coach.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    rating = db.Column(db.Integer, nullable=False) # 1 to 5
+    coach_id = db.Column(db.Integer, db.ForeignKey("coach.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)  # 1 to 5
     comment = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Relationship to access the student's name
-    student = db.relationship('User', backref='reviews_written', lazy=True)
+    student = db.relationship("User", backref="reviews_written", lazy=True)
+
 
 class Subscriber(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -165,28 +167,29 @@ class Coach(db.Model):
     profile_image = db.Column(db.String(300), default="default_coach.jpg")
     achievements = db.Column(db.Text)
     is_verified = db.Column(db.Boolean, default=False)
-    travel_radius = db.Column(db.Integer, default=0) # 0 means "I don't travel / At my venue only"
-    reviews = db.relationship('Review', backref='coach', lazy=True, cascade="all, delete-orphan")
-    
+    # 0 means "I don't travel / At my venue only"
+    travel_radius = db.Column(db.Integer, default=0)
+
+    reviews = db.relationship(
+        "Review", backref="coach", lazy=True, cascade="all, delete-orphan"
+    )
+
     # Relationships
     bookings_received = db.relationship("Booking", backref="coach", lazy=True)
 
     def get_whatsapp_url(self):
         if not self.phone:
             return "#"
-        
-        # 1. Clean the number (remove spaces, dashes, plus signs)
+
         clean_number = "".join(filter(str.isdigit, self.phone))
-        
-        # 2. Add Country Code (Assuming India +91 if user entered 10 digits)
         if len(clean_number) == 10:
             clean_number = "91" + clean_number
-            
-        # 3. Generate Link with pre-filled message
-        message = f"Hi {self.name}, I saw your profile on GameChanger and I am interested in training."
-        # Simple URL encoding for spaces
+
+        message = (
+            f"Hi {self.name}, I saw your profile on GameChanger and I am interested in training."
+        )
         message = message.replace(" ", "%20")
-        
+
         return f"https://wa.me/{clean_number}?text={message}"
 
     def get_sports_list(self):
@@ -202,7 +205,9 @@ class Coach(db.Model):
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     coach_id = db.Column(db.Integer, db.ForeignKey("coach.id"), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)  # The Hirer
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=False
+    )  # The Hirer
     sport = db.Column(db.String(100), nullable=False)
     booking_date = db.Column(db.Date, nullable=False)
     booking_time = db.Column(db.String(20), nullable=False)
@@ -215,6 +220,16 @@ class Booking(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+def redirect_for_user(user: User):
+    """
+    Central place to decide where to send a user after login / when already logged in.
+    Coaches -> dashboard, Hirers -> home.
+    """
+    if user.role == "coach":
+        return redirect(url_for("coach_dashboard"))
+    return redirect(url_for("home"))
 
 
 def create_slug(name, sport_str):
@@ -235,153 +250,178 @@ def create_slug(name, sport_str):
 @login_required
 def add_review(coach_id):
     coach = Coach.query.get_or_404(coach_id)
-    
-    # SECURITY CHECK: Has the user booked this coach?
-    valid_booking = Booking.query.filter_by(
-        user_id=current_user.id, 
-        coach_id=coach.id, 
-        status='Confirmed'
-    ).first()
-    
-    if not valid_booking:
-        flash("You must complete a session with this coach before leaving a review.", "danger")
-        return redirect(url_for('coach_detail', slug=coach.slug))
 
-    # 1. Get Form Data
-    rating = int(request.form.get("rating"))
-    comment = request.form.get("comment")
-    
-    # 2. Save Review
-    new_review = Review(
-        coach_id=coach.id,
-        user_id=current_user.id,
-        rating=rating,
-        comment=comment
-    )
-    db.session.add(new_review)
-    
-    # 3. Recalculate Average Rating
-    db.session.commit() 
-    
+    if current_user.role == "coach":
+        flash("Coaches cannot leave reviews.", "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
+
+    valid_booking = Booking.query.filter_by(
+        user_id=current_user.id, coach_id=coach.id, status="Confirmed"
+    ).first()
+
+    if not valid_booking:
+        flash(
+            "You must complete a session with this coach before leaving a review.",
+            "danger",
+        )
+        return redirect(url_for("coach_detail", slug=coach.slug))
+
+    rating_str = request.form.get("rating")
+    comment = request.form.get("comment", "").strip()
+
+    try:
+        rating = int(rating_str)
+    except (TypeError, ValueError):
+        flash("Please select a valid rating.", "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
+
+    if rating < 1 or rating > 5:
+        flash("Rating must be between 1 and 5.", "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
+
+    existing_review = Review.query.filter_by(
+        coach_id=coach.id, user_id=current_user.id
+    ).first()
+
+    if existing_review:
+        existing_review.rating = rating
+        existing_review.comment = comment
+    else:
+        new_review = Review(
+            coach_id=coach.id,
+            user_id=current_user.id,
+            rating=rating,
+            comment=comment,
+        )
+        db.session.add(new_review)
+
+    db.session.commit()
+
     all_reviews = Review.query.filter_by(coach_id=coach.id).all()
     if all_reviews:
         avg_rating = sum([r.rating for r in all_reviews]) / len(all_reviews)
         coach.rating = round(avg_rating, 1)
         db.session.commit()
-    
+
     flash("Review submitted successfully!", "success")
-    return redirect(url_for('coach_detail', slug=coach.slug))
+    return redirect(url_for("coach_detail", slug=coach.slug))
+
+
 @app.route("/subscribe", methods=["POST"])
 def subscribe():
     email = request.form.get("email")
-    
+
     if email:
-        # Check if already subscribed
         existing = Subscriber.query.filter_by(email=email).first()
-        
+
         if existing:
             flash("You are already subscribed!", "info")
         else:
-            # 1. Save to Database
             new_sub = Subscriber(email=email)
             db.session.add(new_sub)
             db.session.commit()
-            
-            # 2. Send Welcome Email
+
             try:
                 msg = Message("Welcome to the Club! 🏆", recipients=[email])
                 msg.body = (
                     "Hi there,\n\n"
                     "Thanks for joining the GameChanger community! You're now on the list to receive "
                     "updates on top coaches, training tips, and exclusive offers.\n\n"
-                    "Ready to level up? Find your mentor today: " + url_for('coaches', _external=True) + "\n\n"
+                    "Ready to level up? Find your mentor today: "
+                    + url_for("coaches", _external=True)
+                    + "\n\n"
                     "Best,\nThe GameChanger Team"
                 )
                 mail.send(msg)
             except Exception as e:
-                print(f"Email failed: {e}") # Print error to console but don't crash app
-            
+                print(f"Email failed: {e}")
+
             flash("Thanks for subscribing! A welcome email is on its way.", "success")
     else:
         flash("Please enter a valid email.", "danger")
-        
-    # Redirect back to the page they came from
-    return redirect(request.referrer or url_for('home'))
 
-# --- ADMIN DASHBOARD ---
+    return redirect(request.referrer or url_for("home"))
+
+
 @app.route("/admin")
 @login_required
 def admin_dashboard():
-    # 1. SECURITY: Strict Admin Check
-    if current_user.email != app.config['MAIL_USERNAME']:
+    if current_user.email != app.config["MAIL_USERNAME"]:
         flash("Access Denied: You are not the Super Admin.", "danger")
-        return redirect(url_for('home'))
+        return redirect(url_for("home"))
 
-    # 2. GATHER STATS
     stats = {
-        'total_users': User.query.count(),
-        'total_coaches': Coach.query.count(),
-        'total_bookings': Booking.query.count(),
-        'subscribers': Subscriber.query.count(),
-        # Calculate rough revenue (Sum of all booking prices) - optional logic
-        'revenue': sum([b.coach.price_per_session for b in Booking.query.all() if b.coach])
+        "total_users": User.query.count(),
+        "total_coaches": Coach.query.count(),
+        "total_bookings": Booking.query.count(),
+        "subscribers": Subscriber.query.count(),
+        "revenue": sum(
+            [b.coach.price_per_session for b in Booking.query.all() if b.coach]
+        ),
     }
-    
-    # 3. FETCH DATA
+
     recent_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(10).all()
     pending_coaches = Coach.query.filter_by(is_verified=False).limit(5).all()
-    
-    return render_template("admin_dashboard.html", stats=stats, bookings=recent_bookings, pending_coaches=pending_coaches)
 
-# --- ADMIN ACTION: MANUAL VERIFY ---
+    return render_template(
+        "admin_dashboard.html",
+        stats=stats,
+        bookings=recent_bookings,
+        pending_coaches=pending_coaches,
+    )
+
+
 @app.route("/admin/verify/<int:coach_id>")
 @login_required
 def admin_verify_coach(coach_id):
-    if current_user.email != app.config['MAIL_USERNAME']:
-        return redirect(url_for('home'))
-        
+    if current_user.email != app.config["MAIL_USERNAME"]:
+        flash("Access Denied: Admin only.", "danger")
+        return redirect(url_for("home"))
+
     coach = Coach.query.get_or_404(coach_id)
     coach.is_verified = True
     db.session.commit()
     flash(f"Verified Coach {coach.name} successfully.", "success")
-    return redirect(url_for('admin_dashboard'))
+    return redirect(url_for("admin_dashboard"))
+
 
 @app.route("/admin/email", methods=["GET", "POST"])
 @login_required
 def admin_email():
-    # SECURITY: Only allow the email owner to access this page
-    if current_user.email != app.config['MAIL_USERNAME']:
+    if current_user.email != app.config["MAIL_USERNAME"]:
         flash("Access Denied: Admin only.", "danger")
-        return redirect(url_for('home'))
+        return redirect(url_for("home"))
 
-    # Get all subscribers
     subscribers = Subscriber.query.all()
-    
+
     if request.method == "POST":
         subject = request.form.get("subject")
         body_text = request.form.get("message")
-        
+
         if not subject or not body_text:
             flash("Please fill in both subject and message.", "warning")
         else:
             sent_count = 0
             try:
-                # Open ONE connection for bulk sending (Much faster)
                 with mail.connect() as conn:
                     for sub in subscribers:
                         msg = Message(subject, recipients=[sub.email])
                         msg.body = body_text + "\n\n--\nUnsubscribe: Reply with 'UNSUBSCRIBE'"
                         conn.send(msg)
                         sent_count += 1
-                
-                flash(f"Successfully sent email to {sent_count} subscribers!", "success")
-                return redirect(url_for('coach_dashboard'))
-                
+
+                flash(
+                    f"Successfully sent email to {sent_count} subscribers!",
+                    "success",
+                )
+                return redirect(url_for("admin_dashboard"))
+
             except Exception as e:
                 print(f"Bulk email error: {e}")
                 flash("An error occurred while sending emails.", "danger")
 
     return render_template("admin_email.html", subscriber_count=len(subscribers))
+
 
 @app.route("/")
 def home():
@@ -393,18 +433,63 @@ def home():
 def plans():
     return render_template("plans.html")
 
-
 @app.route("/coaches")
 def coaches():
+    # Pagination
+    page = request.args.get("page", 1, type=int)
+
+    # Filters
     sport_filter = request.args.get("sport", "").strip()
     city_filter = request.args.get("city", "").strip()
+    price_min = request.args.get("price_min", type=int)
+    price_max = request.args.get("price_max", type=int)
+
     query = Coach.query
+
     if sport_filter:
         query = query.filter(Coach.sport.ilike(f"%{sport_filter}%"))
     if city_filter:
         query = query.filter(Coach.city.ilike(f"%{city_filter}%"))
-    coaches_list = query.order_by(Coach.id.desc()).all()
-    return render_template("coaches.html", coaches=coaches_list)
+    if price_min is not None:
+        query = query.filter(Coach.price_per_session >= price_min)
+    if price_max is not None:
+        query = query.filter(Coach.price_per_session <= price_max)
+
+    # Order by best rating first
+    pagination = query.order_by(Coach.rating.desc()).paginate(
+        page=page, per_page=9, error_out=False
+    )
+
+    return render_template(
+        "coaches.html",
+        pagination=pagination,
+        coaches=pagination.items,
+        sports_list=SPORTS_LIST,   # for dropdown
+        sport_filter=sport_filter,
+        city_filter=city_filter,
+        price_min=price_min,
+        price_max=price_max,
+    )
+
+@app.route("/coach/availability")
+@login_required
+def coach_availability():
+    if current_user.role != "coach":
+        flash("Access denied.", "danger")
+        return redirect(url_for("home"))
+
+    return render_template("coach_availability.html")
+
+
+@app.route("/coach/availability/update", methods=["POST"])
+@login_required
+def update_availability():
+    if current_user.role != "coach":
+        flash("Access denied.", "danger")
+        return redirect(url_for("home"))
+
+    flash("Availability schedule updated successfully!", "success")
+    return redirect(url_for("coach_dashboard"))
 
 
 @app.route("/coaches/<slug>")
@@ -412,15 +497,11 @@ def coach_detail(slug):
     coach = Coach.query.filter_by(slug=slug).first_or_404()
     achievements = coach.achievements.splitlines() if coach.achievements else []
     specialties = [s.strip() for s in (coach.specialties or "").split(",") if s.strip()]
-    
-    # LOGIC: Check if user can review
+
     can_review = False
-    if current_user.is_authenticated and current_user.role != 'coach':
-        # Check for ANY confirmed booking
+    if current_user.is_authenticated and current_user.role != "coach":
         booking = Booking.query.filter_by(
-            user_id=current_user.id, 
-            coach_id=coach.id, 
-            status='Confirmed'
+            user_id=current_user.id, coach_id=coach.id, status="Confirmed"
         ).first()
         if booking:
             can_review = True
@@ -430,13 +511,18 @@ def coach_detail(slug):
         coach=coach,
         achievements=achievements,
         specialties=specialties,
-        can_review=can_review  # <--- PASS THIS FLAG
+        can_review=can_review,
     )
+
 
 @app.route("/book/<int:coach_id>", methods=["POST"])
 @login_required
 def book_session(coach_id):
     coach = Coach.query.get_or_404(coach_id)
+
+    if current_user.role != "hirer":
+        flash("Only players/parents/academies (hirer accounts) can book sessions.", "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
 
     sport = request.form.get("sport")
     date_str = request.form.get("date")
@@ -449,21 +535,15 @@ def book_session(coach_id):
         return redirect(url_for("coach_detail", slug=coach.slug))
 
     try:
-        # Convert String to Date Object
         date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
-        
-        # 1. SECURITY CHECK: Is the date in the past?
         today = datetime.now().date()
         if date_obj < today:
             flash("You cannot book a session in the past.", "danger")
             return redirect(url_for("coach_detail", slug=coach.slug))
-            
-        # 2. SECURITY CHECK: Is the time passed (if booking for today)?
+
         if date_obj == today:
-            # Convert "09:00 AM" to 24-hour integer (e.g., 9)
             time_obj = datetime.strptime(time_slot, "%I:%M %p").time()
             now_time = datetime.now().time()
-            
             if time_obj < now_time:
                 flash("That time slot has already passed for today.", "danger")
                 return redirect(url_for("coach_detail", slug=coach.slug))
@@ -480,27 +560,116 @@ def book_session(coach_id):
         booking_time=time_slot,
         message=message,
         location=location,
-        status="Confirmed",
+        status="Pending",
     )
 
     db.session.add(new_booking)
     db.session.commit()
 
-    flash(f"Session booked successfully with Coach {coach.name}!", "success")
+    # EMAIL NOTIFICATION TO COACH
+    try:
+        if coach.user and coach.user.email:
+            msg = Message(
+                "New booking request on GameChanger",
+                recipients=[coach.user.email],
+            )
+            msg.body = (
+                f"Hi {coach.name},\n\n"
+                f"You have a new booking request from {current_user.name}.\n\n"
+                f"Sport: {sport}\n"
+                f"Date: {date_obj.strftime('%d %b %Y')}\n"
+                f"Time: {time_slot}\n"
+                f"Location: {location or 'Not specified'}\n\n"
+                "Log in to your GameChanger dashboard to confirm or reject this session.\n\n"
+                "- GameChanger"
+            )
+            mail.send(msg)
+    except Exception as e:
+        print("Booking email error:", e)
+
+    flash(
+        f"Booking request sent to Coach {coach.name}! "
+        "They will confirm or decline from their dashboard.",
+        "success",
+    )
     return redirect(url_for("coach_dashboard"))
+@app.route("/booking/<int:booking_id>/status", methods=["POST"])
+@login_required
+def update_booking_status(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+
+    # Only the correct coach can change status
+    if current_user.role != "coach" or not current_user.coach_profile:
+        flash("Access denied.", "danger")
+        return redirect(url_for("coach_dashboard"))
+
+    if booking.coach_id != current_user.coach_profile.id:
+        flash("You are not allowed to modify this booking.", "danger")
+        return redirect(url_for("coach_dashboard"))
+
+    new_status = request.form.get("status", "").strip()
+
+    if new_status not in ["Confirmed", "Rejected"]:
+        flash("Invalid status update.", "danger")
+        return redirect(url_for("coach_dashboard"))
+
+    booking.status = new_status
+    db.session.commit()
+
+    # --- Email notification to hirer (student) ---
+    try:
+        if booking.student and booking.student.email:
+            if new_status == "Confirmed":
+                subject = "Your GameChanger booking was confirmed 🎉"
+                body = (
+                    f"Hi {booking.student.name},\n\n"
+                    f"Good news! Your booking with Coach {booking.coach.name} has been CONFIRMED.\n\n"
+                    f"Sport: {booking.sport}\n"
+                    f"Date: {booking.booking_date.strftime('%d %b %Y')}\n"
+                    f"Time: {booking.booking_time}\n"
+                    f"Location: {booking.location or 'Not specified'}\n\n"
+                    "You can see this session under 'My Schedule' in your dashboard.\n\n"
+                    "- GameChanger"
+                )
+            else:
+                subject = "Your GameChanger booking was updated"
+                body = (
+                    f"Hi {booking.student.name},\n\n"
+                    f"Your booking with Coach {booking.coach.name} has been marked as REJECTED.\n\n"
+                    f"Sport: {booking.sport}\n"
+                    f"Date: {booking.booking_date.strftime('%d %b %Y')}\n"
+                    f"Time: {booking.booking_time}\n\n"
+                    "You can try booking another slot or a different coach on GameChanger.\n\n"
+                    "- GameChanger"
+                )
+
+            msg = Message(subject, recipients=[booking.student.email])
+            msg.body = body
+            mail.send(msg)
+    except Exception as e:
+        print("Hirer notification email error:", e)
+
+    # Flash messages for coach
+    if new_status == "Confirmed":
+        flash("Booking confirmed. The student will see it as Confirmed in their dashboard.", "success")
+    else:
+        flash("Booking marked as Rejected.", "info")
+
+    return redirect(url_for("coach_dashboard"))
+
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for("coach_dashboard"))
+        return redirect_for_user(current_user)
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-        role = request.form.get("role", "hirer")  # Default to 'hirer'
-        org_type = request.form.get("org_type", "individual")  # 'individual' or 'organization'
+        role = request.form.get("role", "hirer")
+        org_type = request.form.get("org_type", "individual")
 
-        # Logic: If they are a hirer and selected 'organization', set flag True
         is_org = False
         if role == "hirer" and org_type == "organization":
             is_org = True
@@ -521,9 +690,8 @@ def register():
             if role == "coach":
                 return redirect(url_for("coach_dashboard"))
             else:
-                # Redirect Hirers to Plans page first to upsell, or Dashboard
                 if is_org:
-                    return redirect(url_for("plans"))  # Send organizations to pricing immediately
+                    return redirect(url_for("plans"))
                 return redirect(url_for("home"))
 
     return render_template("register.html")
@@ -532,17 +700,15 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("coach_dashboard"))
+        return redirect_for_user(current_user)
+
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             login_user(user)
-            if user.role == "coach":
-                return redirect(url_for("coach_dashboard"))
-            else:
-                return redirect(url_for("home"))
+            return redirect_for_user(user)
         else:
             flash("Invalid credentials.", "danger")
     return render_template("login.html")
@@ -561,7 +727,9 @@ def send_otp():
     try:
         otp = "".join(random.choices(string.digits, k=6))
         session["verification_otp"] = otp
-        msg = Message("Verify your Game Changer Account", recipients=[current_user.email])
+        msg = Message(
+            "Verify your Game Changer Account", recipients=[current_user.email]
+        )
         msg.body = (
             f"Hello {current_user.name},\n\n"
             f"Your Verification OTP is: {otp}\n\n"
@@ -571,7 +739,10 @@ def send_otp():
         return {"status": "success", "message": "OTP sent to " + current_user.email}
     except Exception as e:
         print(e)
-        return {"status": "error", "message": "Failed to send email. Check app config."}
+        return {
+            "status": "error",
+            "message": "Failed to send email. Check app config.",
+        }
 
 
 @app.route("/verify/coach", methods=["POST"])
@@ -592,31 +763,42 @@ def verify_coach():
     return redirect(url_for("coach_dashboard"))
 
 
-@app.route("/dashboard", methods=["GET", "POST"])  # Universal Dashboard Link
+@app.route("/dashboard", methods=["GET", "POST"])
 @login_required
 def coach_dashboard():
-    # If user is a coach, show coach profile management
     coach = current_user.coach_profile
 
-    my_bookings = (
-        Booking.query.filter_by(user_id=current_user.id)
-        .order_by(Booking.booking_date.desc())
-        .all()
-    )
+    # Booking filter: all / pending / confirmed / rejected / upcoming
+    booking_filter = request.args.get("filter", "all").lower()
+
+    def apply_booking_filter(query):
+        today = datetime.now().date()
+        if booking_filter == "pending":
+            return query.filter_by(status="Pending")
+        if booking_filter == "confirmed":
+            return query.filter_by(status="Confirmed")
+        if booking_filter == "rejected":
+            return query.filter_by(status="Rejected")
+        if booking_filter == "upcoming":
+            return query.filter(Booking.booking_date >= today)
+        return query
+
+    my_query = Booking.query.filter_by(user_id=current_user.id)
+    my_query = apply_booking_filter(my_query)
+    my_bookings = my_query.order_by(Booking.booking_date.desc()).all()
 
     received_bookings = []
     if coach:
-        received_bookings = (
-            Booking.query.filter_by(coach_id=coach.id)
-            .order_by(Booking.booking_date.desc())
-            .all()
-        )
+        received_query = Booking.query.filter_by(coach_id=coach.id)
+        received_query = apply_booking_filter(received_query)
+        received_bookings = received_query.order_by(Booking.booking_date.desc()).all()
 
     context = {
         "coach": coach,
         "sports_list": SPORTS_LIST,
         "my_bookings": my_bookings,
         "received_bookings": received_bookings,
+        "booking_filter": booking_filter,
     }
 
     if request.method == "POST":
@@ -634,12 +816,14 @@ def coach_dashboard():
         exp_raw = request.form.get("experience_years", "").strip()
         age_raw = request.form.get("age", "").strip()
         phone = request.form.get("phone", "").strip()
+        travel_raw = request.form.get("travel_radius", "").strip()
 
         try:
             exp = int(exp_raw) if exp_raw else 0
             age = int(age_raw) if age_raw else 0
+            travel_radius = int(travel_raw) if travel_raw else 0
         except ValueError:
-            flash("Age/Experience must be numbers.", "danger")
+            flash("Age/Experience/Travel radius must be numbers.", "danger")
             return render_template("dashboard_coach.html", **context)
 
         selected_sports = request.form.getlist("sports")
@@ -690,6 +874,7 @@ def coach_dashboard():
                 specialties=specialties,
                 profile_image=image_filename,
                 achievements=achievements,
+                travel_radius=travel_radius,
             )
             db.session.add(coach)
         else:
@@ -707,6 +892,7 @@ def coach_dashboard():
             coach.specialties = specialties
             coach.profile_image = image_filename
             coach.achievements = achievements
+            coach.travel_radius = travel_radius
 
         db.session.commit()
         flash("Profile updated successfully!", "success")

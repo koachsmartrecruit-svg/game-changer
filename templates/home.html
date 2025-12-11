@@ -113,10 +113,12 @@
     <div class="col-md-4">
         <div class="card h-100 border-0 shadow-sm rounded-4 hover-lift transition-all">
             <div class="position-relative">
-                <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}" 
-                     class="card-img-top rounded-top-4" 
-                     alt="{{ coach.name }}"
-                     style="height: 300px; object-fit: cover;">
+                <img 
+    src="{{ url_for('static', filename='uploads/' + coach.profile_image) if coach.profile_image else 'https://ui-avatars.com/api/?name=' + coach.name|urlencode + '&background=random&size=128' }}" 
+    class="w-100" 
+    style="height: 250px; object-fit: cover;"
+    alt="{{ coach.name }}"
+    onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ coach.name|urlencode }}&background=random&size=128';">
                 
                 <span class="position-absolute top-0 end-0 m-3 bg-white px-3 py-1 rounded-pill small fw-bold shadow-sm">
                     ★ {{ coach.rating }}

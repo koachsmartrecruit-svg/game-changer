@@ -2,72 +2,163 @@
 
 {% block content %}
 
-<div class="text-center mb-5 pt-4">
-    <h1 class="display-4 mb-3">Find Your Mentor</h1>
-    <p class="lead text-muted mb-4">Browse our curated list of professional coaches.</p>
-    
-    <div class="d-inline-block bg-white rounded-pill shadow-lg p-2" style="max-width: 600px; width: 100%;">
-        <form action="{{ url_for('coaches') }}" method="GET" class="d-flex align-items-center">
-            <i class="bi bi-search ms-3 text-muted"></i>
-            <input type="text" name="sport" class="form-control border-0 shadow-none bg-transparent" placeholder="Sport (e.g. Tennis)" value="{{ request.args.get('sport', '') }}">
-            <div class="vr mx-2 opacity-25"></div>
-            <input type="text" name="city" class="form-control border-0 shadow-none bg-transparent" placeholder="City" value="{{ request.args.get('city', '') }}">
-            <button class="btn btn-primary rounded-pill px-4" type="submit">Search</button>
-        </form>
-    </div>
-</div>
+<div class="container py-4 py-lg-5">
+    <!-- HERO + FILTER CARD -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <h1 class="h3 serif-font mb-2">Find your GameChanger Coach</h1>
+            <p class="text-muted small mb-3">
+                Filter by sport, city and budget to match with verified coaches.
+            </p>
+            <div>
+                {% if sport_filter or city_filter or price_min is not none or price_max is not none %}
+                    <div class="mb-2 small text-muted">Active filters:</div>
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        {% if sport_filter %}
+                            <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary">
+                                <i class="bi bi-trophy me-1"></i> {{ sport_filter }}
+                            </span>
+                        {% endif %}
+                        {% if city_filter %}
+                            <span class="badge rounded-pill bg-dark bg-opacity-10 text-dark">
+                                <i class="bi bi-geo-alt me-1"></i> {{ city_filter }}
+                            </span>
+                        {% endif %}
+                        {% if price_min is not none %}
+                            <span class="badge rounded-pill bg-success bg-opacity-10 text-success">
+                                Min ₹{{ price_min }}
+                            </span>
+                        {% endif %}
+                        {% if price_max is not none %}
+                            <span class="badge rounded-pill bg-danger bg-opacity-10 text-danger">
+                                Max ₹{{ price_max }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('coaches') }}" class="small text-decoration-none">Clear filters</a>
+                {% else %}
+                    <small class="text-muted">Tip: Try "Cricket, Mumbai, under ₹1000"</small>
+                {% endif %}
+            </div>
+        </div>
 
-<div class="row g-4">
-    {% for coach in coaches %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card h-100 border-0 shadow-sm rounded-4 hover-lift">
-            <div class="row g-0 h-100">
-                <div class="position-relative">
-                    <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}" 
-                         class="w-100 rounded-top-4" 
-                         style="height: 250px; object-fit: cover;">
-                    
-                    {% if coach.is_verified %}
-                    <span class="position-absolute bottom-0 start-0 m-3 badge-verified bg-white shadow-sm">
-                        Verified Pro
-                    </span>
-                    {% endif %}
-                    
-                    <span class="position-absolute top-0 end-0 m-3 bg-white px-2 py-1 rounded-3 small fw-bold shadow-sm">
-                        ★ {{ coach.rating }}
-                    </span>
-                </div>
-                
-                <div class="card-body p-4 d-flex flex-column">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-primary fw-bold text-uppercase small">{{ coach.sport.split(',')[0] }}</span>
-                        <span class="text-muted small"><i class="bi bi-geo-alt"></i> {{ coach.city }}</span>
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Sport</label>
+                        <select name="sport" class="form-select form-select-sm">
+                            <option value="">Any sport</option>
+                            {% for s in sports_list %}
+                                <option value="{{ s }}" {% if sport_filter == s %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    
-                    <h4 class="mb-1">{{ coach.name }}</h4>
-                    <p class="text-muted small mb-3">{{ coach.tagline or "Dedicated professional coach" }}</p>
-                    
-                    <div class="mt-auto pt-3 border-top border-light d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="d-block small text-muted">Starting from</span>
-                            <span class="fw-bold fs-5">₹{{ coach.price_per_session }}</span>
-                        </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">City</label>
+                        <input type="text" name="city" class="form-control form-control-sm" placeholder="e.g. Mumbai" value="{{ city_filter or '' }}">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Budget / session (₹)</label>
                         <div class="d-flex gap-2">
-                             <a href="{{ coach.get_whatsapp_url() }}" target="_blank" class="btn btn-success btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Chat on WhatsApp">
-                                <i class="bi bi-whatsapp"></i>
-                            </a>
-                            <a href="{{ url_for('coach_detail', slug=coach.slug) }}" class="btn btn-outline-dark btn-sm rounded-pill px-3">Profile</a>
+                            <input type="number" name="price_min" class="form-control form-control-sm" placeholder="Min" value="{{ price_min if price_min is not none else '' }}">
+                            <input type="number" name="price_max" class="form-control form-control-sm" placeholder="Max" value="{{ price_max if price_max is not none else '' }}">
                         </div>
                     </div>
-                </div>
+
+                    <div class="col-md-12 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4">
+                            <i class="bi bi-funnel me-1"></i> Apply Filters
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-    {% else %}
-    <div class="col-12 text-center py-5">
-        <h3 class="serif-font text-muted">No results found.</h3>
-        <p>Try adjusting your filters.</p>
+
+    <!-- COACH CARDS GRID using EXACT same card HTML as home.html -->
+    <div class="row g-4 mb-5">
+        {% if coaches %}
+            {% for coach in coaches %}
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 hover-lift transition-all">
+                        <div class="position-relative">
+                            <img 
+                                src="{{ url_for('static', filename='uploads/' + coach.profile_image) if coach.profile_image else 'https://ui-avatars.com/api/?name=' + coach.name|urlencode + '&background=random&size=128' }}" 
+                                class="w-100" 
+                                style="height: 250px; object-fit: cover;"
+                                alt="{{ coach.name }}"
+                                onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ coach.name|urlencode }}&background=random&size=128';">
+                            
+                            <span class="position-absolute top-0 end-0 m-3 bg-white px-3 py-1 rounded-pill small fw-bold shadow-sm">
+                                ★ {{ coach.rating }}
+                            </span>
+                        </div>
+
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-primary fw-bold small text-uppercase">{{ coach.sport.split(',')[0] }}</span>
+                                {% if coach.is_verified %}
+                                    <i class="bi bi-patch-check-fill text-primary" title="Verified"></i>
+                                {% endif %}
+                            </div>
+
+                            <h4 class="card-title mb-1 fw-bold">{{ coach.name }}</h4>
+                            <p class="text-muted small mb-3 text-truncate">{{ coach.tagline }}</p>
+                            <hr class="opacity-10">
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">₹{{ coach.price_per_session }} <span class="fw-normal text-muted small">/ session</span></span>
+                                <a href="{{ url_for('coach_detail', slug=coach.slug) }}" class="btn btn-dark rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="bi bi-search fs-1 text-muted opacity-25 mb-3"></i>
+                    <p class="text-muted mb-2">No coaches match your filters right now.</p>
+                    <p class="small text-muted mb-3">Try removing one or more filters, or searching another city/sport.</p>
+                    <a href="{{ url_for('coaches') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-4">Reset filters</a>
+                </div>
+            </div>
+        {% endif %}
     </div>
-    {% endfor %}
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+        <div class="d-flex justify-content-center mt-4">
+            <nav aria-label="Coaches pagination">
+                <ul class="pagination pagination-sm">
+                    {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('coaches', page=pagination.prev_num, sport=sport_filter, city=city_filter, price_min=price_min, price_max=price_max) }}">&laquo;</a>
+                        </li>
+                    {% endif %}
+                    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if p %}
+                            <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('coaches', page=p, sport=sport_filter, city=city_filter, price_min=price_min, price_max=price_max) }}">{{ p }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('coaches', page=pagination.next_num, sport=sport_filter, city=city_filter, price_min=price_min, price_max=price_max) }}">&raquo;</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    {% endif %}
 </div>
+
 {% endblock %}
