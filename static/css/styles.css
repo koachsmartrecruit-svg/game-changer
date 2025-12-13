@@ -26,6 +26,11 @@ body {
     overflow-x: hidden; /* Prevent horizontal scroll from overlaps */
 }
 
+/* Hide body scroll during loading */
+body.loading {
+    overflow: hidden;
+}
+
 /* TYPOGRAPHY */
 h1, h2, h3, h4, h5, .serif-font {
     font-family: 'Playfair Display', serif;
@@ -690,6 +695,243 @@ html {
     .chatbot-container {
         bottom: 10px;
         right: 10px;
+    }
+}
+
+/* ===== CREATIVE APP LOADING SCREEN ===== */
+.app-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 50%, #34495e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    opacity: 1;
+    transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+    visibility: visible;
+}
+
+.app-loader.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.loader-content {
+    text-align: center;
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    padding: 40px;
+}
+
+/* Sports Balls Animation */
+.sports-balls-container {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 40px;
+}
+
+.sport-ball {
+    position: absolute;
+    font-size: 3rem;
+    animation: bounceRotate 2s ease-in-out infinite;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.ball-1 {
+    top: 20%;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.ball-2 {
+    top: 10%;
+    right: 15%;
+    animation-delay: 0.5s;
+}
+
+.ball-3 {
+    bottom: 20%;
+    left: 15%;
+    animation-delay: 1s;
+}
+
+.ball-4 {
+    bottom: 10%;
+    right: 10%;
+    animation-delay: 1.5s;
+}
+
+@keyframes bounceRotate {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg) scale(1);
+        opacity: 0.8;
+    }
+    25% {
+        transform: translateY(-30px) rotate(90deg) scale(1.1);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(-10px) rotate(180deg) scale(0.9);
+        opacity: 0.9;
+    }
+    75% {
+        transform: translateY(-25px) rotate(270deg) scale(1.05);
+        opacity: 1;
+    }
+}
+
+/* Logo Animation */
+.loader-logo {
+    margin-bottom: 30px;
+    animation: fadeInUp 0.8s ease-out;
+}
+
+.loader-brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 10px;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    letter-spacing: -2px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.loader-tagline {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 10px;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* Progress Bar */
+.loader-progress {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 30px auto;
+    position: relative;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6c757d 0%, #495057 50%, #6c757d 100%);
+    background-size: 200% 100%;
+    border-radius: 10px;
+    animation: progressFill 2s ease-in-out infinite, shimmer 2s linear infinite;
+    width: 0%;
+}
+
+@keyframes progressFill {
+    0% {
+        width: 0%;
+    }
+    50% {
+        width: 70%;
+    }
+    100% {
+        width: 100%;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Loading Text */
+.loader-text {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.95rem;
+    margin-top: 20px;
+    font-weight: 500;
+}
+
+.loading-dots {
+    display: inline-block;
+}
+
+.loading-dots span {
+    animation: dotBounce 1.4s ease-in-out infinite;
+    display: inline-block;
+    margin: 0 2px;
+}
+
+.loading-dots span:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes dotBounce {
+    0%, 80%, 100% {
+        transform: translateY(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: translateY(-10px);
+        opacity: 1;
+    }
+}
+
+/* Responsive Loading Screen */
+@media (max-width: 768px) {
+    .loader-brand {
+        font-size: 2.5rem;
+    }
+    
+    .sports-balls-container {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .sport-ball {
+        font-size: 2rem;
+    }
+    
+    .loader-tagline {
+        font-size: 0.9rem;
     }
 }
 
