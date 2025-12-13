@@ -2,7 +2,9 @@ import os
 import json
 import random
 import string
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
+from functools import wraps
 from flask import (
     Flask,
     render_template,
@@ -12,6 +14,7 @@ from flask import (
     flash,
     session,
     jsonify,
+    abort,
 )
 try:
     import gspread
@@ -19,7 +22,6 @@ try:
     GOOGLE_SHEETS_AVAILABLE = True
 except ImportError:
     GOOGLE_SHEETS_AVAILABLE = False
-    logger.warning("Google Sheets libraries not installed. Install gspread and google-auth to enable.")
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager,
@@ -34,8 +36,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from slugify import slugify
 from dotenv import load_dotenv
+from markupsafe import escape
 
 load_dotenv()
+
 # ---------- STRIPE CONFIG & LOGGING ----------
 import logging
 import stripe
@@ -44,10 +48,13 @@ import stripe
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+# Log Google Sheets availability after logger is initialized
+if not GOOGLE_SHEETS_AVAILABLE:
+    logger.warning("Google Sheets libraries not installed. Install gspread and google-auth to enable.")
+
 # Stripe environment vars (set these in .env locally, and in Render secrets in production)
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")  # set locally to: STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")  # pk_test_...
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")  # set from Stripe dashboard (test webhook secret)
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 if STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
@@ -63,7 +70,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 # APP CONFIG
 # ---------------------------------
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "dev-secret-key-change-this"
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key-change-this")
 
 # ---- EMAIL CONFIGURATION (GMAIL) ----
 app.config["MAIL_SERVER"] = "smtp.gmail.com"
@@ -130,6 +137,207 @@ SPORTS_LIST = [
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+# ---------------------------------
+# VALIDATION & SECURITY HELPERS
+# ---------------------------------
+
+def validate_email(email):
+    """Validate email format"""
+    if not email or len(email) > 120:
+        return False
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
+
+
+def validate_password(password):
+    """Validate password strength"""
+    if not password:
+        return False, "Password is required"
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    if len(password) > 128:
+        return False, "Password must be less than 128 characters"
+    if not re.search(r'[A-Za-z]', password):
+        return False, "Password must contain at least one letter"
+    if not re.search(r'[0-9]', password):
+        return False, "Password must contain at least one number"
+    return True, "Valid password"
+
+
+def validate_name(name):
+    """Validate name field"""
+    if not name or len(name.strip()) < 2:
+        return False, "Name must be at least 2 characters long"
+    if len(name) > 120:
+        return False, "Name must be less than 120 characters"
+    if not re.match(r'^[a-zA-Z\s\-\'\.]+$', name):
+        return False, "Name contains invalid characters"
+    return True, "Valid name"
+
+
+def validate_phone(phone):
+    """Validate phone number"""
+    if not phone:
+        return True, "Phone is optional"
+    phone_clean = re.sub(r'[\s\-\(\)]', '', phone)
+    if not re.match(r'^\+?[1-9]\d{9,14}$', phone_clean):
+        return False, "Invalid phone number format"
+    return True, "Valid phone"
+
+
+def sanitize_input(text, max_length=None):
+    """Sanitize user input to prevent XSS"""
+    if not text:
+        return ""
+    text = str(text).strip()
+    if max_length and len(text) > max_length:
+        text = text[:max_length]
+    return escape(text)
+
+
+def validate_date(date_str):
+    """Validate date string format"""
+    try:
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+        if date_obj < datetime.now().date():
+            return False, "Date cannot be in the past"
+        if date_obj > datetime.now().date() + timedelta(days=365):
+            return False, "Date cannot be more than 1 year in the future"
+        return True, date_obj
+    except ValueError:
+        return False, "Invalid date format"
+
+
+def validate_time(time_str):
+    """Validate time slot format"""
+    if not time_str:
+        return False, "Time is required"
+    pattern = r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+    if not re.match(pattern, time_str):
+        return False, "Invalid time format (use HH:MM)"
+    return True, time_str
+
+
+def validate_price(price_str):
+    """Validate price input"""
+    try:
+        price = int(price_str)
+        if price < 0:
+            return False, "Price cannot be negative"
+        if price > 100000:
+            return False, "Price cannot exceed ₹100,000"
+        return True, price
+    except (ValueError, TypeError):
+        return False, "Price must be a valid number"
+
+
+def validate_json_input(data, required_fields=None, field_types=None):
+    """Validate JSON input for API endpoints"""
+    if not isinstance(data, dict):
+        return False, "Invalid JSON format"
+    
+    if required_fields:
+        for field in required_fields:
+            if field not in data:
+                return False, f"Missing required field: {field}"
+    
+    if field_types:
+        for field, expected_type in field_types.items():
+            if field in data and not isinstance(data[field], expected_type):
+                return False, f"Invalid type for field: {field}"
+    
+    return True, "Valid input"
+
+
+# Rate limiting storage (in production, use Redis)
+_rate_limit_storage = {}
+
+
+def rate_limit(max_requests=5, window_seconds=60):
+    """Simple rate limiting decorator"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            client_id = request.remote_addr
+            key = f"{f.__name__}:{client_id}"
+            now = datetime.now()
+            
+            if key in _rate_limit_storage:
+                requests, window_start = _rate_limit_storage[key]
+                if (now - window_start).seconds < window_seconds:
+                    if requests >= max_requests:
+                        logger.warning(f"Rate limit exceeded for {client_id} on {f.__name__}")
+                        return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
+                    _rate_limit_storage[key] = (requests + 1, window_start)
+                else:
+                    _rate_limit_storage[key] = (1, now)
+            else:
+                _rate_limit_storage[key] = (1, now)
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+# Authorization decorators
+def coach_required(f):
+    """Decorator to ensure user is a coach"""
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if current_user.role != "coach":
+            flash("Access denied. Coach access required.", "danger")
+            return redirect(url_for("home"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def hirer_required(f):
+    """Decorator to ensure user is a hirer"""
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if current_user.role != "hirer":
+            flash("Access denied. Student/Hirer access required.", "danger")
+            return redirect(url_for("home"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def admin_required(f):
+    """Decorator to ensure user is admin"""
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if current_user.email != app.config["MAIL_USERNAME"]:
+            flash("Access denied. Admin access required.", "danger")
+            return redirect(url_for("home"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def validate_file_upload(file):
+    """Comprehensive file upload validation"""
+    if not file or file.filename == "":
+        return False, "No file selected"
+    
+    if not allowed_file(file.filename):
+        return False, "Invalid file type. Only PNG, JPG, and JPEG are allowed"
+    
+    # Check file size (max 5MB)
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    
+    if file_size > 5 * 1024 * 1024:  # 5MB
+        return False, "File size exceeds 5MB limit"
+    
+    if file_size == 0:
+        return False, "File is empty"
+    
+    return True, "Valid file"
 
 
 # ---------------------------------
@@ -298,13 +506,9 @@ def plans():
 
 
 @app.route("/review/<int:coach_id>", methods=["POST"])
-@login_required
+@hirer_required
 def add_review(coach_id):
     coach = Coach.query.get_or_404(coach_id)
-
-    if current_user.role == "coach":
-        flash("Coaches cannot leave reviews.", "danger")
-        return redirect(url_for("coach_detail", slug=coach.slug))
 
     valid_booking = Booking.query.filter_by(
         user_id=current_user.id, coach_id=coach.id, status="Confirmed"
@@ -317,9 +521,10 @@ def add_review(coach_id):
         )
         return redirect(url_for("coach_detail", slug=coach.slug))
 
-    rating_str = request.form.get("rating")
+    rating_str = request.form.get("rating", "").strip()
     comment = request.form.get("comment", "").strip()
 
+    # Validate rating
     try:
         rating = int(rating_str)
     except (TypeError, ValueError):
@@ -330,19 +535,24 @@ def add_review(coach_id):
         flash("Rating must be between 1 and 5.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 
+    # Validate comment length
+    if comment and len(comment) > 2000:
+        flash("Comment is too long (max 2000 characters).", "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
+
     existing_review = Review.query.filter_by(
         coach_id=coach.id, user_id=current_user.id
     ).first()
 
     if existing_review:
         existing_review.rating = rating
-        existing_review.comment = comment
+        existing_review.comment = sanitize_input(comment, max_length=2000)
     else:
         new_review = Review(
             coach_id=coach.id,
             user_id=current_user.id,
             rating=rating,
-            comment=comment,
+            comment=sanitize_input(comment, max_length=2000),
         )
         db.session.add(new_review)
 
@@ -357,8 +567,17 @@ def add_review(coach_id):
 
 
 @app.route("/subscribe", methods=["POST"])
+@rate_limit(max_requests=3, window_seconds=60)
 def subscribe():
-    email = request.form.get("email")
+    email = request.form.get("email", "").strip().lower()
+
+    if not email:
+        flash("Please enter an email address.", "danger")
+        return redirect(request.referrer or url_for("home"))
+
+    if not validate_email(email):
+        flash("Invalid email format.", "danger")
+        return redirect(request.referrer or url_for("home"))
 
     if email:
         existing = Subscriber.query.filter_by(email=email).first()
@@ -383,7 +602,7 @@ def subscribe():
                 )
                 mail.send(msg)
             except Exception as e:
-                print(f"Email failed: {e}")
+                logger.error(f"Email failed: {e}")
 
             flash("Thanks for subscribing! A welcome email is on its way.", "success")
     else:
@@ -393,11 +612,8 @@ def subscribe():
 
 
 @app.route("/admin")
-@login_required
+@admin_required
 def admin_dashboard():
-    if current_user.email != app.config["MAIL_USERNAME"]:
-        flash("Access Denied: You are not the Super Admin.", "danger")
-        return redirect(url_for("home"))
 
     stats = {
         "total_users": User.query.count(),
@@ -421,11 +637,8 @@ def admin_dashboard():
 
 
 @app.route("/admin/verify/<int:coach_id>")
-@login_required
+@admin_required
 def admin_verify_coach(coach_id):
-    if current_user.email != app.config["MAIL_USERNAME"]:
-        flash("Access Denied: Admin only.", "danger")
-        return redirect(url_for("home"))
 
     coach = Coach.query.get_or_404(coach_id)
     coach.is_verified = True
@@ -435,27 +648,39 @@ def admin_verify_coach(coach_id):
 
 
 @app.route("/admin/email", methods=["GET", "POST"])
-@login_required
+@admin_required
 def admin_email():
-    if current_user.email != app.config["MAIL_USERNAME"]:
-        flash("Access Denied: Admin only.", "danger")
-        return redirect(url_for("home"))
 
     subscribers = Subscriber.query.all()
 
     if request.method == "POST":
-        subject = request.form.get("subject")
-        body_text = request.form.get("message")
+        subject = request.form.get("subject", "").strip()
+        body_text = request.form.get("message", "").strip()
 
-        if not subject or not body_text:
-            flash("Please fill in both subject and message.", "warning")
+        # Validate inputs
+        if not subject:
+            flash("Subject is required.", "warning")
+            return render_template("admin_email.html", subscriber_count=len(subscribers))
+        
+        if len(subject) > 200:
+            flash("Subject is too long (max 200 characters).", "warning")
+            return render_template("admin_email.html", subscriber_count=len(subscribers))
+
+        if not body_text:
+            flash("Message is required.", "warning")
+            return render_template("admin_email.html", subscriber_count=len(subscribers))
+        
+        if len(body_text) > 10000:
+            flash("Message is too long (max 10000 characters).", "warning")
+            return render_template("admin_email.html", subscriber_count=len(subscribers))
         else:
             sent_count = 0
             try:
+                subject_safe = sanitize_input(subject, max_length=200)
                 with mail.connect() as conn:
                     for sub in subscribers:
-                        msg = Message(subject, recipients=[sub.email])
-                        msg.body = body_text + "\n\n--\nUnsubscribe: Reply with 'UNSUBSCRIBE'"
+                        msg = Message(subject_safe, recipients=[sub.email])
+                        msg.body = sanitize_input(body_text, max_length=10000) + "\n\n--\nUnsubscribe: Reply with 'UNSUBSCRIBE'"
                         conn.send(msg)
                         sent_count += 1
 
@@ -466,7 +691,7 @@ def admin_email():
                 return redirect(url_for("admin_dashboard"))
 
             except Exception as e:
-                print(f"Bulk email error: {e}")
+                logger.error(f"Bulk email error: {e}")
                 flash("An error occurred while sending emails.", "danger")
 
     return render_template("admin_email.html", subscriber_count=len(subscribers))
@@ -474,18 +699,15 @@ def admin_email():
 
 @app.route("/")
 def home():
-    # Try to load top coaches from DB (6 items)
-    # Get top coaches with ratings > 0, then coaches with 0 rating
     top_coaches = Coach.query.filter(Coach.rating > 0).order_by(Coach.rating.desc()).limit(6).all()
     if len(top_coaches) < 6:
         zero_rating_coaches = Coach.query.filter(Coach.rating == 0.0).limit(6 - len(top_coaches)).all()
         top_coaches.extend(zero_rating_coaches)
     stats = {
-        "active_impressions": "3.2k",              # display-friendly string
-        "total_coaches": Coach.query.count(),      # integer
-        "total_bookings": Booking.query.count(),   # integer
+        "active_impressions": "3.2k",
+        "total_coaches": Coach.query.count(),
+        "total_bookings": Booking.query.count(),
     }
-    # If no coaches (fresh DB), provide lightweight sample placeholders
     if not top_coaches or len(top_coaches) == 0:
         sample = [
             {
@@ -555,7 +777,6 @@ def home():
                 "city": "Kolkata"
             },
         ]
-        # mark them as simple objects with attribute access for templates
         class _S:
             def __init__(self, d):
                 self.__dict__.update(d)
@@ -619,21 +840,15 @@ def coaches():
     )
 
 @app.route("/coach/availability")
-@login_required
+@coach_required
 def coach_availability():
-    if current_user.role != "coach":
-        flash("Access denied.", "danger")
-        return redirect(url_for("home"))
 
     return render_template("coach_availability.html")
 
 
 @app.route("/coach/availability/update", methods=["POST"])
-@login_required
+@coach_required
 def update_availability():
-    if current_user.role != "coach":
-        flash("Access denied.", "danger")
-        return redirect(url_for("home"))
 
     flash("Availability schedule updated successfully!", "success")
     return redirect(url_for("coach_dashboard"))
@@ -662,34 +877,55 @@ def coach_detail(slug):
     )
 
 @app.route("/book/<int:coach_id>", methods=["POST"])
-@login_required
+@hirer_required
 def book_session(coach_id):
     coach = Coach.query.get_or_404(coach_id)
-
-    # 1. Validation Logic
-    if current_user.role != "hirer":
-        flash("Only hirers can book sessions.", "danger")
-        return redirect(url_for("coach_detail", slug=coach.slug))
     
-    # Get form data
-    sport = request.form.get("sport")
-    date_str = request.form.get("date")
-    time_slot = request.form.get("time")
-    message = request.form.get("message")
-    location = request.form.get("location")
+    # Get and validate form data
+    sport = request.form.get("sport", "").strip()
+    date_str = request.form.get("date", "").strip()
+    time_slot = request.form.get("time", "").strip()
+    message = request.form.get("message", "").strip()
+    location = request.form.get("location", "").strip()
+
+    # Validate required fields
+    if not sport:
+        flash("Please select a sport.", "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
 
     if not date_str or not time_slot:
         flash("Please select a valid date and time.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 
-    try:
-        date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
-        # ... (Keep your existing date validation logic here) ...
-    except ValueError:
-        flash("Invalid date format.", "danger")
+    # Validate sport is in coach's sports list
+    coach_sports = coach.get_sports_list()
+    if sport not in coach_sports:
+        flash("Invalid sport selected.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 
-    # --- NEW: DOUBLE BOOKING CHECK ---
+    # Validate date
+    date_valid, date_result = validate_date(date_str)
+    if not date_valid:
+        flash(date_result, "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
+    date_obj = date_result
+
+    # Validate time
+    time_valid, time_result = validate_time(time_slot)
+    if not time_valid:
+        flash(time_result, "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
+
+    # Validate message length
+    if message and len(message) > 1000:
+        flash("Message is too long (max 1000 characters).", "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
+
+    # Validate location length
+    if location and len(location) > 255:
+        flash("Location is too long (max 255 characters).", "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
+
     existing_booking = Booking.query.filter_by(
         coach_id=coach.id,
         booking_date=date_obj,
@@ -700,35 +936,29 @@ def book_session(coach_id):
         flash("This time slot is already booked. Please choose another.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 
-    # 2. Save Booking as "Payment Pending"
-    # We save it NOW so we have an ID to send to Stripe
     initial_status = "Payment Pending"
-    
-    # If coach is free, we can just confirm immediately (optional logic)
     if coach.price_per_session == 0:
         initial_status = "Confirmed"
 
     new_booking = Booking(
         coach_id=coach.id,
         user_id=current_user.id,
-        sport=sport,
+        sport=sanitize_input(sport),
         booking_date=date_obj,
-        booking_time=time_slot,
-        message=message,
-        location=location,
+        booking_time=time_result,
+        message=sanitize_input(message, max_length=1000),
+        location=sanitize_input(location, max_length=255),
         status=initial_status, 
     )
 
     db.session.add(new_booking)
     db.session.commit()
 
-    # 3. If Coach is Free, skip Stripe
     if coach.price_per_session == 0:
-        # Send emails manually here or refactor email logic into a function
         flash("Booking confirmed!", "success")
         return redirect(url_for("coach_dashboard"))
 
-    # 4. If Coach is Paid, Create Stripe Session (Dynamic Price)
+    # Create Stripe Session for paid coaches
     try:
         checkout_session = stripe.checkout.Session.create(
             mode="payment",
@@ -736,7 +966,6 @@ def book_session(coach_id):
             line_items=[{
                 'price_data': {
                     'currency': 'inr',
-                    # PRICE CALCULATION: Stripe expects Paisa (Multiply by 100)
                     'unit_amount': int(coach.price_per_session * 100),
                     'product_data': {
                         'name': f"Training with {coach.name}",
@@ -745,7 +974,6 @@ def book_session(coach_id):
                 },
                 'quantity': 1,
             }],
-            # CRITICAL: Pass the Booking ID so Webhook knows what to update
             metadata={
                 'booking_id': new_booking.id, 
                 'type': 'coach_booking'
@@ -757,19 +985,17 @@ def book_session(coach_id):
 
     except Exception as e:
         logger.exception("Stripe Error")
-        # If stripe fails, delete the pending booking so it doesn't clutter DB
         db.session.delete(new_booking)
         db.session.commit()
         flash("Error initializing payment. Please try again.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 @app.route("/booking/<int:booking_id>/status", methods=["POST"])
-@login_required
+@coach_required
 def update_booking_status(booking_id):
     booking = Booking.query.get_or_404(booking_id)
 
-    # Only the correct coach can change status
-    if current_user.role != "coach" or not current_user.coach_profile:
-        flash("Access denied.", "danger")
+    if not current_user.coach_profile:
+        flash("Coach profile not found.", "danger")
         return redirect(url_for("coach_dashboard"))
 
     if booking.coach_id != current_user.coach_profile.id:
@@ -785,7 +1011,6 @@ def update_booking_status(booking_id):
     booking.status = new_status
     db.session.commit()
 
-    # --- Email notification to hirer (student) ---
     try:
         if booking.student and booking.student.email:
             if new_status == "Confirmed":
@@ -816,7 +1041,7 @@ def update_booking_status(booking_id):
             msg.body = body
             mail.send(msg)
     except Exception as e:
-        print("Hirer notification email error:", e)
+        logger.error(f"Hirer notification email error: {e}")
 
     # Flash messages for coach
     if new_status == "Confirmed":
@@ -828,6 +1053,7 @@ def update_booking_status(booking_id):
 
 
 @app.route("/register", methods=["GET", "POST"])
+@rate_limit(max_requests=5, window_seconds=300)
 def register():
     if current_user.is_authenticated:
         return redirect_for_user(current_user)
@@ -839,16 +1065,39 @@ def register():
         role = request.form.get("role", "hirer")
         org_type = request.form.get("org_type", "individual")
 
+        # Validate name
+        name_valid, name_msg = validate_name(name)
+        if not name_valid:
+            flash(name_msg, "danger")
+            return render_template("register.html")
+
+        # Validate email
+        if not validate_email(email):
+            flash("Invalid email format.", "danger")
+            return render_template("register.html")
+
+        # Validate password
+        password_valid, password_msg = validate_password(password)
+        if not password_valid:
+            flash(password_msg, "danger")
+            return render_template("register.html")
+
+        # Validate role
+        if role not in ["hirer", "coach"]:
+            flash("Invalid role selected.", "danger")
+            return render_template("register.html")
+
+        # Check if email exists
+        if User.query.filter_by(email=email).first():
+            flash("Email already registered.", "danger")
+            return render_template("register.html")
+
         is_org = False
         if role == "hirer" and org_type == "organization":
             is_org = True
 
-        if not name or not email or not password:
-            flash("Fill all fields.", "danger")
-        elif User.query.filter_by(email=email).first():
-            flash("Email taken.", "danger")
-        else:
-            user = User(name=name, email=email, role=role, is_organization=is_org)
+        try:
+            user = User(name=sanitize_input(name), email=email, role=role, is_organization=is_org)
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
@@ -862,11 +1111,16 @@ def register():
                 if is_org:
                     return redirect(url_for("plans"))
                 return redirect(url_for("home"))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Registration error: {e}")
+            flash("An error occurred during registration. Please try again.", "danger")
 
     return render_template("register.html")
 
 
 @app.route("/login", methods=["GET", "POST"])
+@rate_limit(max_requests=5, window_seconds=300)
 def login():
     if current_user.is_authenticated:
         return redirect_for_user(current_user)
@@ -874,12 +1128,25 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+
+        # Validate email format
+        if not validate_email(email):
+            flash("Invalid email format.", "danger")
+            return render_template("login.html")
+
+        # Validate password presence
+        if not password:
+            flash("Password is required.", "danger")
+            return render_template("login.html")
+
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             login_user(user)
+            logger.info(f"User {user.id} logged in successfully")
             return redirect_for_user(user)
         else:
-            flash("Invalid credentials.", "danger")
+            logger.warning(f"Failed login attempt for email: {email}")
+            flash("Invalid email or password.", "danger")
     return render_template("login.html")
 
 
@@ -907,7 +1174,7 @@ def send_otp():
         mail.send(msg)
         return {"status": "success", "message": "OTP sent to " + current_user.email}
     except Exception as e:
-        print(e)
+        logger.error(f"OTP email error: {e}")
         return {
             "status": "error",
             "message": "Failed to send email. Check app config.",
@@ -1003,23 +1270,67 @@ def coach_dashboard():
         phone = request.form.get("phone", "").strip()
         travel_raw = request.form.get("travel_radius", "").strip()
 
+        # Validate name
+        name_valid, name_msg = validate_name(name)
+        if not name_valid:
+            flash(name_msg, "danger")
+            return render_template("dashboard_coach.html", **context)
+
+        # Validate city
+        if not city or len(city.strip()) < 2:
+            flash("City is required and must be at least 2 characters.", "danger")
+            return render_template("dashboard_coach.html", **context)
+
+        # Validate phone if provided
+        if phone:
+            phone_valid, phone_msg = validate_phone(phone)
+            if not phone_valid:
+                flash(phone_msg, "danger")
+                return render_template("dashboard_coach.html", **context)
+
+        # Validate numeric fields
         try:
             exp = int(exp_raw) if exp_raw else 0
+            if exp < 0 or exp > 100:
+                flash("Experience years must be between 0 and 100.", "danger")
+                return render_template("dashboard_coach.html", **context)
+            
             age = int(age_raw) if age_raw else 0
+            if age < 0 or age > 120:
+                flash("Age must be between 0 and 120.", "danger")
+                return render_template("dashboard_coach.html", **context)
+            
             travel_radius = int(travel_raw) if travel_raw else 0
+            if travel_radius < 0 or travel_radius > 1000:
+                flash("Travel radius must be between 0 and 1000 km.", "danger")
+                return render_template("dashboard_coach.html", **context)
         except ValueError:
-            flash("Age/Experience/Travel radius must be numbers.", "danger")
+            flash("Age/Experience/Travel radius must be valid numbers.", "danger")
             return render_template("dashboard_coach.html", **context)
 
         selected_sports = request.form.getlist("sports")
+        if not selected_sports:
+            flash("Please select at least one sport.", "danger")
+            return render_template("dashboard_coach.html", **context)
+
+        # Validate sports are in allowed list
+        for sport in selected_sports:
+            if sport not in SPORTS_LIST:
+                flash(f"Invalid sport selected: {sport}", "danger")
+                return render_template("dashboard_coach.html", **context)
+
         prices_dict = {}
         for sport in selected_sports:
-            price_input = request.form.get(f"price_{sport}")
+            price_input = request.form.get(f"price_{sport}", "").strip()
             if price_input:
-                try:
-                    prices_dict[sport] = int(price_input)
-                except ValueError:
-                    prices_dict[sport] = 0
+                price_valid, price_result = validate_price(price_input)
+                if price_valid:
+                    prices_dict[sport] = price_result
+                else:
+                    flash(f"Invalid price for {sport}: {price_result}", "danger")
+                    return render_template("dashboard_coach.html", **context)
+            else:
+                prices_dict[sport] = 0
 
         sports_str = ",".join(selected_sports)
         prices_json = json.dumps(prices_dict)
@@ -1032,52 +1343,72 @@ def coach_dashboard():
         image_filename = coach.profile_image if coach else "default_coach.jpg"
         if "profile_image" in request.files:
             file = request.files["profile_image"]
-            if file and file.filename != "" and allowed_file(file.filename):
-                ext = file.filename.rsplit(".", 1)[1].lower()
-                new_filename = secure_filename(
-                    f"coach_{current_user.id}_{int(datetime.now().timestamp())}.{ext}"
-                )
-                file.save(os.path.join(app.config["UPLOAD_FOLDER"], new_filename))
-                image_filename = new_filename
+            if file and file.filename != "":
+                file_valid, file_msg = validate_file_upload(file)
+                if file_valid:
+                    ext = file.filename.rsplit(".", 1)[1].lower()
+                    new_filename = secure_filename(
+                        f"coach_{current_user.id}_{int(datetime.now().timestamp())}.{ext}"
+                    )
+                    try:
+                        file.save(os.path.join(app.config["UPLOAD_FOLDER"], new_filename))
+                        image_filename = new_filename
+                    except Exception as e:
+                        logger.error(f"File upload error: {e}")
+                        flash("Error uploading image. Please try again.", "danger")
+                        return render_template("dashboard_coach.html", **context)
+                else:
+                    flash(file_msg, "danger")
+                    return render_template("dashboard_coach.html", **context)
+
+        # Sanitize text inputs
+        name_safe = sanitize_input(name, max_length=120)
+        tagline_safe = sanitize_input(tagline, max_length=255)
+        achievements_safe = sanitize_input(achievements, max_length=5000)
+        specialties_safe = sanitize_input(specialties, max_length=1000)
+        city_safe = sanitize_input(city, max_length=120)
+        state_safe = sanitize_input(state, max_length=100)
+        pincode_safe = sanitize_input(pincode, max_length=10)
+        phone_safe = sanitize_input(phone, max_length=15)
 
         if coach is None:
-            slug = create_slug(name, sports_str)
+            slug = create_slug(name_safe, sports_str)
             coach = Coach(
                 user_id=current_user.id,
                 slug=slug,
-                name=name,
+                name=name_safe,
                 sport=sports_str,
                 sports_prices=prices_json,
-                city=city,
-                state=state,
-                pincode=pincode,
+                city=city_safe,
+                state=state_safe,
+                pincode=pincode_safe,
                 price_per_session=starting_price,
                 experience_years=exp,
                 age=age,
-                phone=phone,
-                tagline=tagline,
-                specialties=specialties,
+                phone=phone_safe,
+                tagline=tagline_safe,
+                specialties=specialties_safe,
                 profile_image=image_filename,
-                achievements=achievements,
+                achievements=achievements_safe,
                 travel_radius=travel_radius,
-                rating=0.0,  # Start with 0 rating
+                rating=0.0,
             )
             db.session.add(coach)
         else:
-            coach.name = name
+            coach.name = name_safe
             coach.sport = sports_str
             coach.sports_prices = prices_json
-            coach.city = city
-            coach.state = state
-            coach.pincode = pincode
+            coach.city = city_safe
+            coach.state = state_safe
+            coach.pincode = pincode_safe
             coach.price_per_session = starting_price
             coach.experience_years = exp
             coach.age = age
-            coach.phone = phone
-            coach.tagline = tagline
-            coach.specialties = specialties
+            coach.phone = phone_safe
+            coach.tagline = tagline_safe
+            coach.specialties = specialties_safe
             coach.profile_image = image_filename
-            coach.achievements = achievements
+            coach.achievements = achievements_safe
             coach.travel_radius = travel_radius
 
         db.session.commit()
@@ -1087,9 +1418,6 @@ def coach_dashboard():
     return render_template("dashboard_coach.html", **context)
 
 # ---------- STRIPE CHECKOUT & WEBHOOK ROUTES ----------
-
-# Create a Checkout Session for a simple one-time purchase (demo)
-# Create a Checkout Session using STRIPE PRICE IDS from .env
 @app.route("/create-checkout-session/<plan>", methods=["POST", "GET"])
 @login_required
 def create_checkout_session(plan):
@@ -1123,7 +1451,6 @@ def create_checkout_session(plan):
             current_user.stripe_customer_id = customer_id
             db.session.commit()
 
-        # Create Checkout Session
         checkout_session = stripe.checkout.Session.create(
             mode="payment",
             customer=customer_id,
@@ -1148,10 +1475,7 @@ def create_checkout_session(plan):
 
 @app.route("/stripe_webhook", methods=["POST"])
 def stripe_webhook():
-    """
-    Webhook endpoint for Stripe events. Verifies signature and performs idempotent handling.
-    Expects STRIPE_WEBHOOK_SECRET in env.
-    """
+    """Webhook endpoint for Stripe events. Verifies signature and performs idempotent handling."""
     payload = request.get_data(as_text=True)
     sig_header = request.headers.get("Stripe-Signature", None)
 
@@ -1172,13 +1496,11 @@ def stripe_webhook():
         logger.exception("Unexpected error while verifying webhook")
         return ("Webhook verification error", 400)
 
-    # Idempotency: skip event if already processed
     event_id = event.get("id")
     if StripeEvent.query.filter_by(event_id=event_id).first():
         logger.info(f"Webhook event {event_id} already processed — skipping.")
         return ("Already processed", 200)
 
-    # Save event id early (prevents duplicate processing in concurrent requests)
     try:
         db.session.add(StripeEvent(event_id=event_id))
         db.session.commit()
@@ -1186,16 +1508,12 @@ def stripe_webhook():
         db.session.rollback()
         logger.exception("Could not store StripeEvent; aborting to avoid duplicate work.")
         return ("DB error", 500)
-
-    # Process relevant events
-    # Process relevant events
     try:
         if event["type"] == "checkout.session.completed":
             session_obj = event["data"]["object"]
             metadata = session_obj.get("metadata", {})
             
-            # CASE A: Subscription Plan (Your existing logic)
-            if metadata.get("type") is None: # Or specific check for plans
+            if metadata.get("type") is None:
                 client_ref = session_obj.get("client_reference_id")
                 customer_id = session_obj.get("customer")
                 if client_ref:
@@ -1203,21 +1521,16 @@ def stripe_webhook():
                     if user:
                         user.stripe_customer_id = customer_id
                         user.stripe_session_id = session_obj.get("id")
-                        # Add logic: user.is_premium = True
                         db.session.commit()
 
-            # CASE B: Coach Booking (New Logic)
             elif metadata.get("type") == "coach_booking":
                 booking_id = metadata.get("booking_id")
                 if booking_id:
                     booking = Booking.query.get(booking_id)
                     if booking:
-                        # 1. Update Status
                         booking.status = "Confirmed"
                         db.session.commit()
                         logger.info(f"Booking {booking_id} confirmed via Stripe.")
-
-                        # 2. Trigger Emails (Move your email logic here)
                         send_booking_confirmation_emails(booking) 
 
     except Exception:
@@ -1261,20 +1574,15 @@ def send_booking_confirmation_emails(booking):
 # ---------------------------------
 @app.errorhandler(404)
 def page_not_found(e):
-    # Note: We return the 404 status code explicitly
     return render_template("404.html"), 404
 
 @app.errorhandler(500)
 def internal_server_error(e):
-    # It's good practice to have a 500 handler too
-    return render_template("404.html"), 500  # You can reuse 404 or make a 500.html
+    return render_template("404.html"), 500
 
 # ---------- GOOGLE SHEETS INTEGRATION ----------
 def save_to_google_sheets(name, phone, email, needs, source="contact_form"):
-    """
-    Save user details to Google Sheets.
-    Requires GOOGLE_SHEETS_CREDENTIALS (JSON string) and GOOGLE_SHEET_ID in .env
-    """
+    """Save user details to Google Sheets."""
     if not GOOGLE_SHEETS_AVAILABLE:
         logger.warning("Google Sheets not available - skipping save")
         return False
@@ -1297,7 +1605,6 @@ def save_to_google_sheets(name, phone, email, needs, source="contact_form"):
         client = gspread.authorize(creds)
         sheet = client.open_by_key(sheet_id).sheet1
         
-        # Append row: Timestamp, Name, Phone, Email, Needs, Source
         row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             name,
@@ -1316,9 +1623,18 @@ def save_to_google_sheets(name, phone, email, needs, source="contact_form"):
 
 # ---------- CONTACT/LEAD CAPTURE ROUTE ----------
 @app.route("/api/contact", methods=["POST"])
+@rate_limit(max_requests=5, window_seconds=60)
 def contact_submit():
-    """Handle contact form submissions and save to Google Sheets."""
+    """Handle contact form submissions."""
+    if not request.is_json:
+        return jsonify({"success": False, "message": "Content-Type must be application/json"}), 400
+    
     data = request.get_json()
+    
+    # Validate JSON structure
+    json_valid, json_msg = validate_json_input(data, required_fields=["name"])
+    if not json_valid:
+        return jsonify({"success": False, "message": json_msg}), 400
     
     name = data.get("name", "").strip()
     phone = data.get("phone", "").strip()
@@ -1326,34 +1642,65 @@ def contact_submit():
     needs = data.get("needs", "").strip()
     source = data.get("source", "contact_form")
     
-    if not name:
-        return jsonify({"success": False, "message": "Name is required"}), 400
+    # Validate name
+    name_valid, name_msg = validate_name(name)
+    if not name_valid:
+        return jsonify({"success": False, "message": name_msg}), 400
+    
+    # Validate email if provided
+    if email and not validate_email(email):
+        return jsonify({"success": False, "message": "Invalid email format"}), 400
+    
+    # Validate phone if provided
+    if phone:
+        phone_valid, phone_msg = validate_phone(phone)
+        if not phone_valid:
+            return jsonify({"success": False, "message": phone_msg}), 400
+    
+    # Validate needs length
+    if needs and len(needs) > 2000:
+        return jsonify({"success": False, "message": "Needs field is too long (max 2000 characters)"}), 400
     
     # Save to Google Sheets
-    saved = save_to_google_sheets(name, phone, email, needs, source)
+    # Sanitize inputs before saving
+    name_safe = sanitize_input(name, max_length=120)
+    phone_safe = sanitize_input(phone, max_length=15) if phone else ""
+    email_safe = email.lower() if email else ""
+    needs_safe = sanitize_input(needs, max_length=2000) if needs else ""
     
-    if saved:
-        return jsonify({
-            "success": True,
-            "message": "Thank you! We'll get back to you soon."
-        })
-    else:
-        # Even if Google Sheets fails, return success (graceful degradation)
-        return jsonify({
-            "success": True,
-            "message": "Thank you! We'll get back to you soon."
-        })
+    save_to_google_sheets(name_safe, phone_safe, email_safe, needs_safe, source)
+    return jsonify({
+        "success": True,
+        "message": "Thank you! We'll get back to you soon."
+    })
 
 # ---------- CHATBOT ROUTE ----------
 @app.route("/api/chatbot", methods=["POST"])
+@rate_limit(max_requests=20, window_seconds=60)
 def chatbot():
-    """Handle chatbot queries for coach selection, pricing, and booking info."""
-    data = request.get_json()
-    query = data.get("query", "").lower().strip()
+    """Handle chatbot queries."""
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 400
     
-    # Coach selection query
+    data = request.get_json()
+    
+    # Validate JSON structure
+    json_valid, json_msg = validate_json_input(data, required_fields=["query"])
+    if not json_valid:
+        return jsonify({"error": json_msg}), 400
+    
+    query = data.get("query", "").strip()
+    
+    # Validate query length
+    if not query:
+        return jsonify({"error": "Query is required"}), 400
+    
+    if len(query) > 500:
+        return jsonify({"error": "Query is too long (max 500 characters)"}), 400
+    
+    query = query.lower()
+    
     if any(keyword in query for keyword in ["which coach", "choose coach", "select coach", "find coach", "coach recommendation", "best coach"]):
-        # Get some stats to make response dynamic
         total_coaches = Coach.query.count()
         verified_coaches = Coach.query.filter_by(is_verified=True).count()
         top_rated = Coach.query.filter(Coach.rating > 0).order_by(Coach.rating.desc()).limit(3).all()
@@ -1362,7 +1709,7 @@ def chatbot():
         response += "1. **Sport & Expertise**: Filter by your sport (Cricket, Football, Badminton, etc.)\n"
         response += "2. **Location**: Choose coaches in your city or check their travel radius\n"
         response += "3. **Budget**: Compare prices per session (₹400-₹700+ range)\n"
-        response += "4. **Ratings**: Look for verified coaches with high ratings (★4.5+)\n"
+        response += "4. **Ratings**: Look for verified coaches with high ratings (4.5+)\n"
         response += "5. **Experience**: Check years of experience and achievements\n\n"
         
         if top_rated:
@@ -1372,13 +1719,11 @@ def chatbot():
             response += "\n"
         
         response += f"We have {total_coaches} coaches available, with {verified_coaches} verified professionals.\n\n"
-        response += "💡 **Tip**: Use filters on the 'Find a Mentor' page to narrow down by sport, city, and price range!"
+        response += "**Tip**: Use filters on the 'Find a Mentor' page to narrow down by sport, city, and price range!"
         
         return jsonify({"response": response, "type": "coach_selection"})
     
-    # Pricing query
     elif any(keyword in query for keyword in ["pricing", "price", "cost", "fee", "how much", "prices", "subscription", "plan"]):
-        # Get average session price
         coaches_with_price = Coach.query.filter(Coach.price_per_session > 0).all()
         avg_price = sum(c.price_per_session for c in coaches_with_price) / len(coaches_with_price) if coaches_with_price else 500
         min_price = min((c.price_per_session for c in coaches_with_price), default=400)
@@ -1398,7 +1743,6 @@ def chatbot():
         
         return jsonify({"response": response, "type": "pricing"})
     
-    # Booking process query
     elif any(keyword in query for keyword in ["how booking", "booking works", "how to book", "book session", "booking process", "how do i book"]):
         response = "**How Booking Works:**\n\n"
         response += "**Step 1: Find a Coach**\n"
@@ -1422,11 +1766,10 @@ def chatbot():
         response += "• Attend your session at the agreed location\n"
         response += "• After completion, you can leave a review\n\n"
         
-        response += "💡 **Note**: You need to be logged in as a student/hirer to book. Coaches cannot book their own sessions."
+        response += "**Note**: You need to be logged in as a student/hirer to book. Coaches cannot book their own sessions."
         
         return jsonify({"response": response, "type": "booking"})
     
-    # Collect user details query
     elif any(keyword in query for keyword in ["contact", "get in touch", "reach out", "connect", "help me", "interested"]):
         response = "I'd love to help! Please share your details:\n\n"
         response += "**Quick Contact Form**\n"
@@ -1442,7 +1785,6 @@ def chatbot():
             "show_contact_form": True
         })
     
-    # Default/fallback response
     else:
         response = "I can help you with:\n\n"
         response += "• **Coach Selection**: Ask 'Which coach should I choose?'\n"
@@ -1456,4 +1798,4 @@ def chatbot():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    app.run(debug=os.getenv("FLASK_DEBUG", "False").lower() == "true")

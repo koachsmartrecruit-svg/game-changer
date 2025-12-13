@@ -11,15 +11,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <!-- Creative App Loading Screen -->
+    <!-- Modern App Loading Screen -->
     <div id="appLoader" class="app-loader">
         <div class="loader-content">
-            <!-- Animated Sports Balls -->
-            <div class="sports-balls-container">
-                <div class="sport-ball ball-1">⚽</div>
-                <div class="sport-ball ball-2">🏀</div>
-                <div class="sport-ball ball-3">🏐</div>
-                <div class="sport-ball ball-4">🎾</div>
+            <!-- Modern Circular Spinner -->
+            <div class="loader-spinner">
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
             </div>
             
             <!-- Logo Animation -->
@@ -269,13 +268,20 @@
             <div class="chatbot-messages" id="chatbotMessages">
                 <div class="chatbot-message bot">
                     <div class="message-bubble">
-                        👋 Hi! I'm here to help you with:
-                        <br><br>
-                        • Choosing the right coach
-                        <br>• Pricing information
-                        <br>• How booking works
-                        <br><br>
-                        Ask me anything!
+                        <div class="greeting-icon">
+                            <i class="bi bi-hand-thumbs-up"></i>
+                        </div>
+                        <div class="greeting-text">
+                            <strong>Hi there!</strong> I'm here to help you with:
+                        </div>
+                        <ul class="help-list">
+                            <li><i class="bi bi-person-check"></i> Choosing the right coach</li>
+                            <li><i class="bi bi-currency-dollar"></i> Pricing information</li>
+                            <li><i class="bi bi-calendar-check"></i> How booking works</li>
+                        </ul>
+                        <div class="help-footer">
+                            <i class="bi bi-chat-dots"></i> Ask me anything!
+                        </div>
                     </div>
                 </div>
             </div>
@@ -309,6 +315,89 @@
         const chatbotInput = document.getElementById('chatbotInput');
         const chatbotSend = document.getElementById('chatbotSend');
         const quickQuestionBtns = document.querySelectorAll('.quick-question-btn');
+        
+        // Event delegation for contact form submit buttons (fallback)
+        chatbotMessages.addEventListener('click', function(e) {
+            if (e.defaultPrevented) return;
+            
+            const submitBtn = e.target.closest('button[id^="contactSubmit_"]');
+            if (submitBtn && !submitBtn.disabled && !submitBtn.hasAttribute('data-handler-attached')) {
+                const formId = submitBtn.id.replace('contactSubmit_', '');
+                const formDiv = submitBtn.closest('.chatbot-contact-form');
+                if (formDiv) {
+                    const nameInput = formDiv.querySelector(`#contactName_${formId}`);
+                    const phoneInput = formDiv.querySelector(`#contactPhone_${formId}`);
+                    const emailInput = formDiv.querySelector(`#contactEmail_${formId}`);
+                    const needsInput = formDiv.querySelector(`#contactNeeds_${formId}`);
+                    const spinner = formDiv.querySelector(`#contactSpinner_${formId}`);
+                    const btnText = formDiv.querySelector(`#contactBtnText_${formId}`);
+                    
+                    if (nameInput && submitBtn) {
+                        handleContactSubmit(e, submitBtn, nameInput, phoneInput, emailInput, needsInput, spinner, btnText, formDiv);
+                    }
+                }
+            }
+        });
+        
+        // Handle contact form submission
+        async function handleContactSubmit(e, submitBtn, nameInput, phoneInput, emailInput, needsInput, spinner, btnText, formDiv) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const name = nameInput.value.trim();
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            const email = emailInput ? emailInput.value.trim() : '';
+            const needs = needsInput ? needsInput.value.trim() : '';
+            
+            if (!name) {
+                alert('Please enter your name');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            if (spinner) spinner.style.display = 'inline-block';
+            if (btnText) btnText.textContent = 'Submitting...';
+            
+            try {
+                const response = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        phone: phone,
+                        email: email,
+                        needs: needs,
+                        source: 'chatbot'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (btnText) btnText.textContent = '✓ Submitted!';
+                    submitBtn.style.background = '#28a745';
+                    if (nameInput) nameInput.disabled = true;
+                    if (phoneInput) phoneInput.disabled = true;
+                    if (emailInput) emailInput.disabled = true;
+                    if (needsInput) needsInput.disabled = true;
+                        addMessage('<div class="success-message"><i class="bi bi-check-circle-fill"></i> Thank you! We\'ve received your details and will get back to you soon.</div>', false);
+                } else {
+                    throw new Error(data.message || 'Submission failed');
+                }
+                } catch (error) {
+                    if (btnText) btnText.textContent = 'Try Again';
+                    submitBtn.disabled = false;
+                    if (spinner) spinner.style.display = 'none';
+                    alert('There was an error submitting your details. Please try again.');
+                }
+        }
 
         // Toggle chatbot window
         chatbotToggle.addEventListener('click', () => {
@@ -329,10 +418,19 @@
             
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble';
-            // Convert markdown-style formatting to HTML
+            // Convert markdown-style formatting to HTML and replace emojis with icons
             let formattedText = text
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\n/g, '<br>');
+                .replace(/\n/g, '<br>')
+                .replace(/💡/g, '<i class="bi bi-lightbulb-fill" style="color: #fbbf24;"></i>')
+                .replace(/✅/g, '<i class="bi bi-check-circle-fill" style="color: #10b981;"></i>')
+                .replace(/💰/g, '<i class="bi bi-currency-dollar" style="color: #f59e0b;"></i>')
+                .replace(/🎉/g, '<i class="bi bi-balloon-fill" style="color: #ec4899;"></i>')
+                .replace(/📧/g, '<i class="bi bi-envelope-fill" style="color: #3b82f6;"></i>')
+                .replace(/📞/g, '<i class="bi bi-telephone-fill" style="color: #3b82f6;"></i>')
+                .replace(/💬/g, '<i class="bi bi-chat-dots-fill" style="color: #667eea;"></i>')
+                .replace(/★/g, '<i class="bi bi-star-fill" style="color: #fbbf24;"></i>')
+                .replace(/⭐/g, '<i class="bi bi-star-fill" style="color: #fbbf24;"></i>');
             bubble.innerHTML = formattedText;
             
             messageDiv.appendChild(bubble);
@@ -351,72 +449,78 @@
         function createContactForm() {
             const formDiv = document.createElement('div');
             formDiv.className = 'chatbot-contact-form';
-            formDiv.innerHTML = `
-                <input type="text" id="contactName" placeholder="Your Name *" required>
-                <input type="tel" id="contactPhone" placeholder="Phone Number">
-                <input type="email" id="contactEmail" placeholder="Email">
-                <textarea id="contactNeeds" rows="3" placeholder="What are you looking for? (e.g., Cricket coach in Mumbai, Budget ₹500/session)"></textarea>
-                <button type="button" id="contactSubmit" class="btn-loading">
-                    <span class="spinner spinner-sm" style="display: none;"></span>
-                    <span class="btn-text">Submit</span>
-                </button>
-            `;
+            // Use unique IDs to avoid conflicts if form is created multiple times
+            const formId = 'contactForm_' + Date.now();
             
-            const submitBtn = formDiv.querySelector('#contactSubmit');
-            const spinner = formDiv.querySelector('.spinner');
-            const btnText = formDiv.querySelector('.btn-text');
+            // Create form elements directly instead of using innerHTML
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.id = `contactName_${formId}`;
+            nameInput.placeholder = 'Your Name *';
+            nameInput.required = true;
             
-            submitBtn.addEventListener('click', async () => {
-                const name = formDiv.querySelector('#contactName').value.trim();
-                const phone = formDiv.querySelector('#contactPhone').value.trim();
-                const email = formDiv.querySelector('#contactEmail').value.trim();
-                const needs = formDiv.querySelector('#contactNeeds').value.trim();
-                
-                if (!name) {
-                    alert('Please enter your name');
-                    return;
-                }
-                
-                // Show loading
-                submitBtn.disabled = true;
-                spinner.style.display = 'inline-block';
-                btnText.textContent = 'Submitting...';
-                
-                try {
-                    const response = await fetch('/api/contact', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            name: name,
-                            phone: phone,
-                            email: email,
-                            needs: needs,
-                            source: 'chatbot'
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        btnText.textContent = '✓ Submitted!';
-                        submitBtn.style.background = '#28a745';
-                        formDiv.querySelectorAll('input, textarea').forEach(input => {
-                            input.disabled = true;
-                        });
-                        addMessage('Thank you! We\'ve received your details and will get back to you soon. 😊', false);
-                    } else {
-                        throw new Error(data.message || 'Submission failed');
-                    }
-                } catch (error) {
-                    console.error('Contact form error:', error);
-                    btnText.textContent = 'Try Again';
-                    submitBtn.disabled = false;
-                    spinner.style.display = 'none';
-                    alert('There was an error submitting your details. Please try again.');
-                }
-            });
+            const phoneInput = document.createElement('input');
+            phoneInput.type = 'tel';
+            phoneInput.id = `contactPhone_${formId}`;
+            phoneInput.placeholder = 'Phone Number';
+            
+            const emailInput = document.createElement('input');
+            emailInput.type = 'email';
+            emailInput.id = `contactEmail_${formId}`;
+            emailInput.placeholder = 'Email';
+            
+            const needsInput = document.createElement('textarea');
+            needsInput.id = `contactNeeds_${formId}`;
+            needsInput.rows = 3;
+            needsInput.placeholder = 'What are you looking for? (e.g., Cricket coach in Mumbai, Budget ₹500/session)';
+            
+            const spinner = document.createElement('span');
+            spinner.className = 'spinner spinner-sm';
+            spinner.id = `contactSpinner_${formId}`;
+            spinner.style.display = 'none';
+            
+            const btnText = document.createElement('span');
+            btnText.className = 'btn-text';
+            btnText.id = `contactBtnText_${formId}`;
+            btnText.textContent = 'Submit';
+            
+            const submitBtn = document.createElement('button');
+            submitBtn.type = 'button';
+            submitBtn.id = `contactSubmit_${formId}`;
+            submitBtn.className = 'btn-loading';
+            submitBtn.appendChild(spinner);
+            submitBtn.appendChild(btnText);
+            
+            // Append all elements to form
+            formDiv.appendChild(nameInput);
+            formDiv.appendChild(phoneInput);
+            formDiv.appendChild(emailInput);
+            formDiv.appendChild(needsInput);
+            formDiv.appendChild(submitBtn);
+            
+            // Handle form submission - use shared function
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent event delegation from also firing
+                handleContactSubmit(e, submitBtn, nameInput, phoneInput, emailInput, needsInput, spinner, btnText, formDiv);
+            };
+            
+            // Mark button as having handler attached (prevents delegation from handling it)
+            submitBtn.setAttribute('data-handler-attached', 'true');
+            
+            // Make child elements non-interactive so clicks bubble to button
+            spinner.style.pointerEvents = 'none';
+            btnText.style.pointerEvents = 'none';
+            
+            // Attach event listener directly to the button
+            submitBtn.addEventListener('click', handleSubmit);
+            
+            // Also use onclick as backup (works even if addEventListener fails)
+            submitBtn.onclick = handleSubmit;
+            
+            // Ensure button is clickable
+            submitBtn.style.cursor = 'pointer';
+            submitBtn.style.pointerEvents = 'auto';
             
             return formDiv;
         }
@@ -470,7 +574,6 @@
                 removeLoadingMessage();
                 addMessage(data.response || 'Sorry, I couldn\'t process that. Please try again.', false, data.show_contact_form);
             } catch (error) {
-                console.error('Chatbot error:', error);
                 removeLoadingMessage();
                 addMessage('Sorry, there was an error. Please try again later.');
             } finally {
