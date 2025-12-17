@@ -157,7 +157,7 @@ def compute_coach_badge(coach):
 # ---------------------------------
 def generate_reset_token(user_id: int) -> str:
     """Generate a signed, time-limited password reset token."""
-    return serializer.dumps({"user_id": user_id}, salt="password-reset")  # [file:153]
+    return serializer.dumps({"user_id": user_id}, salt="password-reset")
 
 
 def verify_reset_token(token: str, max_age_seconds: int = 3600):
@@ -1209,7 +1209,6 @@ def login():
             logger.warning(f"Failed login attempt for email: {email}")
             flash("Invalid email or password.", "danger")
     return render_template("login.html")
-
 @app.route("/forgot-password", methods=["GET", "POST"])
 @rate_limit(max_requests=5, window_seconds=600)
 def forgot_password():
@@ -1223,7 +1222,7 @@ def forgot_password():
 
         user = User.query.filter_by(email=email).first()
         if not user:
-            # Don't reveal whether email exists
+            # Do not reveal whether the email exists
             flash("If this email is registered, a reset link has been sent.", "info")
             return render_template("forgot_password.html")
 
@@ -1248,6 +1247,8 @@ def forgot_password():
             flash("Could not send reset email. Please try again later.", "danger")
 
         return render_template("forgot_password.html")
+
+    return render_template("forgot_password.html")
 
     return render_template("forgot_password.html")
 @app.route("/reset-password/<token>", methods=["GET", "POST"])
