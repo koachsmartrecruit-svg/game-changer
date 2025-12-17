@@ -1,124 +1,139 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row g-0 align-items-stretch" style="min-height: 80vh; margin-top: -20px;">
+<div class="container py-5">
+  <div class="row g-0 align-items-stretch auth-shell">
     
+    <!-- LEFT: FORM -->
     <div class="col-lg-6 d-flex align-items-center justify-content-center order-2 order-lg-1">
-        <div class="p-5 w-100" style="max-width: 550px;">
-            <div class="text-center mb-5">
-                <h1 class="serif-font mb-2">Join the Club</h1>
-                <p class="text-muted">Create an account to get started.</p>
+      <div class="auth-card p-5 w-100" style="max-width: 550px;">
+        <div class="text-center mb-5">
+          <h1 class="serif-font mb-2">Join the Club</h1>
+          <p class="text-muted">Create an account to get started.</p>
+        </div>
+
+        <form method="POST">
+          <!-- ROLE -->
+          <div class="mb-4">
+            <label class="form-label fw-bold small text-muted text-uppercase mb-2">I am joining as...</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="role" id="role_hirer" value="hirer" checked onchange="toggleOrgOption()">
+                <label class="btn auth-role-pill w-100 py-3 rounded-4 text-start ps-3 border-2 h-100" for="role_hirer">
+                  <div class="fw-bold mb-1">
+                    <i class="bi bi-search me-2"></i>I want to Hire
+                  </div>
+                  <small class="d-block opacity-75" style="font-size: 0.75rem; line-height: 1.2;">
+                    Find coaches for yourself, child, or academy.
+                  </small>
+                </label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="role" id="role_coach" value="coach" onchange="toggleOrgOption()">
+                <label class="btn auth-role-pill w-100 py-3 rounded-4 text-start ps-3 border-2 h-100" for="role_coach">
+                  <div class="fw-bold mb-1">
+                    <i class="bi bi-whistle me-2"></i>I am a Coach
+                  </div>
+                  <small class="d-block opacity-75" style="font-size: 0.75rem; line-height: 1.2;">
+                    Create a profile and offer training sessions.
+                  </small>
+                </label>
+              </div>
             </div>
+          </div>
 
-            <form method="POST">
-                
-                <div class="mb-4">
-                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">I am joining as...</label>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <input type="radio" class="btn-check" name="role" id="role_hirer" value="hirer" checked onchange="toggleOrgOption()">
-                            <label class="btn btn-outline-primary w-100 py-3 rounded-4 text-start ps-3 border-2 h-100 shadow-sm" for="role_hirer">
-                                <div class="fw-bold mb-1"><i class="bi bi-search me-2"></i>I want to Hire</div>
-                                <small class="d-block opacity-75" style="font-size: 0.75rem; line-height: 1.2;">Find coaches for yourself, child, or academy.</small>
-                            </label>
-                        </div>
-                        <div class="col-6">
-                            <input type="radio" class="btn-check" name="role" id="role_coach" value="coach" onchange="toggleOrgOption()">
-                            <label class="btn btn-outline-dark w-100 py-3 rounded-4 text-start ps-3 border-2 h-100 shadow-sm" for="role_coach">
-                                <div class="fw-bold mb-1"><i class="bi bi-whistle me-2"></i>I am a Coach</div>
-                                <small class="d-block opacity-75" style="font-size: 0.75rem; line-height: 1.2;">Create a profile and offer training sessions.</small>
-                            </label>
-                        </div>
-                    </div>
-                </div>
+          <!-- ORG TYPE -->
+          <div id="org_section" class="mb-4">
+            <label class="form-label fw-bold small text-muted text-uppercase mb-2">Who are you hiring for?</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="org_type" id="type_ind" value="individual" checked>
+                <label class="btn auth-choice-pill w-100 py-3 rounded-4 text-center border-2" for="type_ind">
+                  <i class="bi bi-person-fill fs-4 d-block mb-1"></i>
+                  <span class="fw-bold small">Myself / Child</span>
+                </label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="org_type" id="type_org" value="organization">
+                <label class="btn auth-choice-pill w-100 py-3 rounded-4 text-center border-2" for="type_org">
+                  <i class="bi bi-building-fill fs-4 d-block mb-1"></i>
+                  <span class="fw-bold small">Academy / College</span>
+                </label>
+              </div>
+            </div>
+          </div>
 
-                <div id="org_section" class="mb-4">
-                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">Who are you hiring for?</label>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <input type="radio" class="btn-check" name="org_type" id="type_ind" value="individual" checked>
-                            <label class="btn btn-outline-secondary w-100 py-3 rounded-4 text-center border-2" for="type_ind">
-                                <i class="bi bi-person-fill fs-4 d-block mb-1"></i>
-                                <span class="fw-bold small">Myself / Child</span>
-                            </label>
-                        </div>
-                        <div class="col-6">
-                            <input type="radio" class="btn-check" name="org_type" id="type_org" value="organization">
-                            <label class="btn btn-outline-secondary w-100 py-3 rounded-4 text-center border-2" for="type_org">
-                                <i class="bi bi-building-fill fs-4 d-block mb-1"></i>
-                                <span class="fw-bold small">Academy / College</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
+          <!-- NAME -->
+          <div class="form-floating mb-3">
+            <input type="text" name="name" class="form-control auth-input" id="name" placeholder="Name" required>
+            <label for="name">Full Name</label>
+          </div>
 
-                <div class="form-floating mb-3">
-                    <input type="text" name="name" class="form-control bg-light border-0 rounded-3" id="name" placeholder="Name" required>
-                    <label for="name">Full Name</label>
-                </div>
+          <!-- EMAIL -->
+          <div class="form-floating mb-3">
+            <input type="email" name="email" class="form-control auth-input" id="email" placeholder="name@example.com" required>
+            <label for="email">Email address</label>
+          </div>
 
-                <div class="form-floating mb-3">
-                    <input type="email" name="email" class="form-control bg-light border-0 rounded-3" id="email" placeholder="name@example.com" required>
-                    <label for="email">Email address</label>
-                </div>
+          <!-- PASSWORD -->
+          <div class="form-floating mb-4">
+            <div class="input-group">
+              <input type="password" name="password" class="form-control auth-input rounded-start-3" id="pass" placeholder="Password" required style="height: 58px;">
+              <button class="btn auth-input-addon rounded-end-3" type="button" onclick="togglePassword('pass', this)" style="height: 58px;">
+                <i class="bi bi-eye-slash-fill text-muted"></i>
+              </button>
+            </div>
+          </div>
 
-                <div class="form-floating mb-4">
-                    <div class="input-group">
-                        <input type="password" name="password" class="form-control bg-light border-0 rounded-start-3" id="pass" placeholder="Password" required style="height: 58px;">
-                        <button class="btn btn-light border-0 rounded-end-3" type="button" onclick="togglePassword('pass', this)" style="height: 58px;">
-                            <i class="bi bi-eye-slash-fill text-muted"></i>
-                        </button>
-                    </div>
-                </div>
+          <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill mb-4 shadow-sm" id="registerBtn">
+            <span id="registerBtnText">Create Account</span>
+          </button>
 
-                <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill mb-4 shadow-sm" id="registerBtn">
-                    <span id="registerBtnText">Create Account</span>
-                </button>
-
-                <div class="text-center">
-                    <p class="text-muted small">Already a member? <a href="{{ url_for('login') }}" class="text-dark text-decoration-none fw-bold">Sign In</a></p>
-                </div>
-            </form>
-        </div>
+          <div class="text-center">
+            <p class="text-muted small">
+              Already a member?
+              <a href="{{ url_for('login') }}" class="auth-link fw-bold">Sign In</a>
+            </p>
+          </div>
+        </form>
+      </div>
     </div>
 
+    <!-- RIGHT: IMAGE PANEL -->
     <div class="col-lg-6 d-none d-lg-block position-relative rounded-4 overflow-hidden my-3 order-1 order-lg-2">
-        <img src="{{ url_for('static', filename='images/mentor-training.jpg') }}" 
-             class="w-100 h-100 object-fit-cover" 
-             style="filter: brightness(0.8);"
-             alt="Training">
-        
-        <div class="position-absolute bottom-0 start-0 p-5 text-white">
-            <h2 class="display-4 serif-font mb-3">Elevate<br>Others.</h2>
-            <p class="lead opacity-75">"Coaching is the universal language of change and learning."</p>
-        </div>
+      <img src="{{ url_for('static', filename='images/mentor-training.jpg') }}"
+           class="w-100 h-100 object-fit-cover"
+           style="filter: brightness(0.75);"
+           alt="Training">
+      <div class="auth-image-gradient"></div>
+      <div class="position-absolute bottom-0 start-0 p-5 text-white">
+        <h2 class="display-4 serif-font mb-3">Elevate<br>Others.</h2>
+        <p class="lead opacity-75">"Coaching is the universal language of change and learning."</p>
+      </div>
     </div>
+  </div>
 </div>
 
 <script>
-    function toggleOrgOption() {
-        const isHirer = document.getElementById('role_hirer').checked;
-        const orgSection = document.getElementById('org_section');
-        
-        if (isHirer) {
-            orgSection.style.display = 'block';
-        } else {
-            orgSection.style.display = 'none';
-        }
+  function toggleOrgOption() {
+    const isHirer = document.getElementById('role_hirer').checked;
+    const orgSection = document.getElementById('org_section');
+    orgSection.style.display = isHirer ? 'block' : 'none';
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    toggleOrgOption();
+
+    const registerForm = document.querySelector('form');
+    const registerBtn = document.getElementById('registerBtn');
+    const registerBtnText = document.getElementById('registerBtnText');
+
+    if (registerForm && registerBtn) {
+      registerForm.addEventListener('submit', function() {
+        registerBtn.disabled = true;
+        registerBtnText.textContent = 'Creating Account...';
+      });
     }
-    document.addEventListener("DOMContentLoaded", function() {
-        toggleOrgOption();
-        
-        const registerForm = document.querySelector('form');
-        const registerBtn = document.getElementById('registerBtn');
-        const registerBtnText = document.getElementById('registerBtnText');
-        
-        if (registerForm && registerBtn) {
-            registerForm.addEventListener('submit', function() {
-                registerBtn.disabled = true;
-                registerBtnText.textContent = 'Creating Account...';
-            });
-        }
-    });
+  });
 </script>
 {% endblock %}

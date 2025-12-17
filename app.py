@@ -16,6 +16,7 @@ from flask import (
     jsonify,
     abort,
 )
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired  # reset tokens
 try:
     import gspread
     from google.oauth2.service_account import Credentials
@@ -71,7 +72,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 # ---------------------------------
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key-change-this")
-
+serializer = URLSafeTimedSerializer(app.secret_key)
 # ---- EMAIL CONFIGURATION (GMAIL) ----
 app.config["MAIL_SERVER"] = "smtp.gmail.com"
 app.config["MAIL_PORT"] = 587
@@ -154,6 +155,36 @@ def compute_coach_badge(coach):
 # ---------------------------------
 # VALIDATION & SECURITY HELPERS
 # ---------------------------------
+def generate_reset_token(user_id: int) -> str:
+    """Generate a signed, time-limited password reset token."""
+    return serializer.dumps({"user_id": user_id}, salt="password-reset")  # [file:153]
+
+
+def verify_reset_token(token: str, max_age_seconds: int = 3600):
+    """
+    Verify password reset token and return user or None.
+    max_age_seconds: token validity window (default 1 hour).
+    """
+    try:
+        data = serializer.loads(token, salt="password-reset", max_age=max_age_seconds)
+    except SignatureExpired:
+        flash("This reset link has expired. Please request a new one.", "warning")
+        return None
+    except BadSignature:
+        flash("Invalid reset link.", "danger")
+        return None
+
+    user_id = data.get("user_id")
+    if not user_id:
+        return None
+
+    user = User.query.get(user_id)
+    if not user:
+        flash("User not found for this reset link.", "danger")
+        return None
+
+    return user
+
 
 def validate_email(email):
     """Validate email format"""
@@ -1179,6 +1210,79 @@ def login():
             flash("Invalid email or password.", "danger")
     return render_template("login.html")
 
+@app.route("/forgot-password", methods=["GET", "POST"])
+@rate_limit(max_requests=5, window_seconds=600)
+def forgot_password():
+    """Let user request a password reset email."""
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+
+        if not validate_email(email):
+            flash("Please enter a valid email.", "danger")
+            return render_template("forgot_password.html")
+
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            # Don't reveal whether email exists
+            flash("If this email is registered, a reset link has been sent.", "info")
+            return render_template("forgot_password.html")
+
+        token = generate_reset_token(user.id)
+        reset_url = url_for("reset_password", token=token, _external=True)
+
+        try:
+            msg = Message("Reset your GameChanger password", recipients=[user.email])
+            msg.body = (
+                f"Hi {user.name},\n\n"
+                "We received a request to reset your GameChanger password.\n\n"
+                "Click the link below to set a new password (valid for 1 hour):\n"
+                f"{reset_url}\n\n"
+                "If you did not request this, you can safely ignore this email.\n\n"
+                "- GameChanger Team"
+            )
+            mail.send(msg)
+            flash("If this email is registered, a reset link has been sent.", "info")
+            logger.info(f"Sent password reset email to user {user.id}")
+        except Exception as e:
+            logger.error(f"Password reset email error: {e}")
+            flash("Could not send reset email. Please try again later.", "danger")
+
+        return render_template("forgot_password.html")
+
+    return render_template("forgot_password.html")
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    """Handle password reset via emailed token."""
+    user = verify_reset_token(token)
+    if not user:
+        # verify_reset_token already flashed message
+        return redirect(url_for("forgot_password"))
+
+    if request.method == "POST":
+        password = request.form.get("password") or ""
+        confirm = request.form.get("confirm_password") or ""
+
+        if password != confirm:
+            flash("Passwords do not match.", "danger")
+            return render_template("reset_password.html", token=token)
+
+        valid, msg = validate_password(password)
+        if not valid:
+            flash(msg, "danger")
+            return render_template("reset_password.html", token=token)
+
+        try:
+            user.set_password(password)
+            db.session.commit()
+            flash("Your password has been reset. You can now sign in.", "success")
+            return redirect(url_for("login"))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error resetting password for user {user.id}: {e}")
+            flash("An error occurred while resetting your password. Please try again.", "danger")
+            return render_template("reset_password.html", token=token)
+
+    return render_template("reset_password.html", token=token)
 
 @app.route("/logout")
 @login_required

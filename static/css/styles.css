@@ -1010,3 +1010,231 @@ footer::before {
     right: 10px;
   }
 }
+/* ================= AUTH PAGES (LOGIN / REGISTER) ================= */
+
+.auth-shell {
+  min-height: 80vh;
+  margin-top: -20px;
+}
+
+/* Glass card for forms */
+.auth-card {
+  background: radial-gradient(circle at top left, #020617 0%, #020617 55%, #000000 100%);
+  border-radius: 28px;
+  border: 1px solid rgba(15, 23, 42, 0.95);
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 1);
+}
+
+/* Right-side image gradient overlay */
+.auth-image-gradient {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(2, 6, 23, 0.9) 0%, transparent 55%),
+    radial-gradient(circle at 10% 0%, rgba(59, 130, 246, 0.45) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+/* Dark floating inputs */
+.auth-input {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(148, 163, 184, 0.45) !important;
+  color: var(--gc-text-main) !important;
+}
+
+.auth-input:focus {
+  border-color: rgba(59, 130, 246, 0.85) !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+}
+
+/* Make floating labels readable on dark fields */
+.form-floating > label {
+  color: var(--gc-text-soft);
+}
+
+.form-floating > .form-control:focus ~ label {
+  color: var(--gc-blue-soft);
+}
+
+/* Password toggle button */
+.auth-input-addon {
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-left: none;
+  color: var(--gc-text-muted);
+}
+
+/* Role & org pills */
+.auth-role-pill,
+.auth-choice-pill {
+  background: rgba(15, 23, 42, 0.96);
+  border-color: rgba(148, 163, 184, 0.55);
+  color: var(--gc-text-main);
+}
+
+.auth-role-pill:hover,
+.auth-choice-pill:hover {
+  border-color: rgba(59, 130, 246, 0.85);
+}
+
+.btn-check:checked + .auth-role-pill,
+.btn-check:checked + .auth-choice-pill {
+  background: radial-gradient(circle at top left, #0b1120 0%, #020617 55%, #000000 100%);
+  border-color: rgba(59, 130, 246, 0.95);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.6);
+}
+
+/* Links on dark background */
+.auth-link {
+  color: var(--gc-blue-soft);
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  color: var(--gc-cyan);
+}
+
+/* ================= DASHBOARD ================= */
+
+.stats-card {
+  background: radial-gradient(circle at top left, #020617 0%, #020617 55%, #000000 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.95);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 1);
+}
+
+.stats-icon {
+  border-radius: 16px;
+  padding: 10px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stats-icon-blue {
+  background: rgba(59, 130, 246, 0.16);
+  color: #93C5FD;
+}
+
+.stats-icon-green {
+  background: rgba(34, 197, 94, 0.16);
+  color: #6EE7B7;
+}
+
+.stats-icon-amber {
+  background: rgba(245, 158, 11, 0.16);
+  color: #FACC15;
+}
+
+.dashboard-filter-pill {
+  border-radius: 999px !important;
+  border-color: rgba(148, 163, 184, 0.5);
+  color: var(--gc-text-muted);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.dashboard-filter-pill.active,
+.dashboard-filter-pill:hover {
+  background: linear-gradient(135deg, var(--gc-blue), var(--gc-cyan));
+  color: #F9FAFB;
+  border-color: transparent;
+}
+
+.dashboard-card-header-primary {
+  background: rgba(37, 99, 235, 0.12);
+  border-bottom: 1px solid rgba(37, 99, 235, 0.35);
+}
+
+.dashboard-card-header-dark {
+  background: radial-gradient(circle at top left, #020617 0%, #020617 60%, #000000 100%);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.9);
+}
+
+.dashboard-list-item {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.dashboard-date-chip {
+  min-width: 60px;
+  border-radius: 18px;
+  background: radial-gradient(circle at top, #020617 0%, #020617 80%);
+  border: 1px solid rgba(30, 64, 175, 0.7);
+  text-align: center;
+  padding: 6px 4px;
+}
+
+.dashboard-status-badge {
+  border-radius: 999px;
+  padding-inline: 12px;
+  font-size: 0.72rem;
+}
+
+.dashboard-status-confirmed {
+  background: rgba(22, 163, 74, 0.16);
+  color: #4ADE80;
+}
+
+.dashboard-status-pending {
+  background: rgba(234, 179, 8, 0.12);
+  color: #FACC15;
+}
+
+.dashboard-status-rejected {
+  background: rgba(239, 68, 68, 0.16);
+  color: #FCA5A5;
+}
+
+.dashboard-location-chip {
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: var(--gc-text-main);
+}
+
+.dashboard-location-chip i {
+  color: #F97373;
+}
+
+.dashboard-sidebar-card {
+  background: radial-gradient(circle at top left, #020617 0%, #020617 60%, #000000 100%);
+  border-radius: 26px;
+  border: 1px solid rgba(15, 23, 42, 0.95);
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 1);
+}
+
+.dashboard-verify-card {
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: var(--gc-text-main);
+}
+
+.dashboard-verify-card-success {
+  background: rgba(22, 163, 74, 0.12);
+  border-color: rgba(22, 163, 74, 0.5);
+  color: #BBF7D0;
+}
+
+.dashboard-verify-card-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #FED7AA;
+}
+
+.dashboard-form-card {
+  background: radial-gradient(circle at top left, #020617 0%, #020617 60%, #000000 100%);
+  border-radius: 28px;
+  border: 1px solid rgba(15, 23, 42, 0.95);
+  box-shadow: 0 32px 110px rgba(15, 23, 42, 1);
+}
+
+.dashboard-section-icon {
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
