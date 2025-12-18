@@ -49,6 +49,7 @@ body {
 }
 
 /* Force default text to light on dark */
+/* Main text color (already hai) */
 body,
 p,
 span,
@@ -60,17 +61,21 @@ small {
   color: var(--gc-text-main);
 }
 
+/* Inputs background dark hi rakho */
 .form-control,
 .form-select {
   background: #020617;
   border: 1px solid rgba(148, 163, 184, 0.35);
-  color: var(--gc-text-main);
+  color: var(--gc-text-main);  /* actual value = bright */
 }
 
+/* Placeholder ko kaafi halka rakho */
 .form-control::placeholder,
 .form-select::placeholder {
-  color: var(--gc-text-soft);
+  color: var(--gc-text-soft);  /* e.g. #64748b type */
+  opacity: 0.6;                /* extra fade */
 }
+
 
 .coach-card,
 .coaches-hero {
@@ -1047,10 +1052,12 @@ footer::before {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
 
-/* Make floating labels readable on dark fields */
+/* Default floating label (when placeholder shown) */
 .form-floating > label {
   color: var(--gc-text-soft);
 }
+
+
 
 .form-floating > .form-control:focus ~ label {
   color: var(--gc-blue-soft);
@@ -1237,4 +1244,41 @@ footer::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+/* DASHBOARD FORM – dark inputs */
+.dashboard-form-card .form-control,
+.dashboard-form-card .form-select {
+  background-color: #020617;                    /* dark field */
+  border: 1px solid rgba(148, 163, 184, 0.35);  /* subtle border */
+  color: var(--gc-text-main);
+}
+
+/* Jo bg-light class lagi hai usko override karo */
+.dashboard-form-card .form-control.bg-light,
+.dashboard-form-card .form-select.bg-light,
+.dashboard-form-card .input-group-text.bg-light {
+  background-color: #020617 !important;
+  color: var(--gc-text-main) !important;
+  border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+/* Placeholder halka grey */
+.dashboard-form-card .form-control::placeholder,
+.dashboard-form-card .form-select::placeholder {
+  color: var(--gc-text-soft);
+  opacity: 0.7;
+}
+
+/* Focus state */
+.dashboard-form-card .form-control:focus,
+.dashboard-form-card .form-select:focus {
+  background-color: #020617;
+  border-color: rgba(59, 130, 246, 0.9);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+}
+
+/* Small price input etc. */
+.dashboard-form-card .form-control-sm {
+  background-color: rgba(15, 23, 42, 0.95);
+  border-color: rgba(148, 163, 184, 0.5);
 }

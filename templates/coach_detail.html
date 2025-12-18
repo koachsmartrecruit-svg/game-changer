@@ -45,27 +45,27 @@
       <div class="d-flex flex-wrap gap-3 align-items-center mb-2">
         <!-- Rating -->
         {% if coach.rating > 0 %}
-        <div class="d-flex align-items-center gap-1">
-          {% set full_stars = coach.rating|int %}
-          {% set has_half = (coach.rating - full_stars) >= 0.5 %}
-          {% for i in range(1, 6) %}
-            {% if i <= full_stars %}
-              <i class="bi bi-star-fill text-warning"></i>
-            {% elif has_half and i == full_stars + 1 %}
-              <i class="bi bi-star-half text-warning"></i>
-            {% else %}
-              <i class="bi bi-star text-warning"></i>
-            {% endif %}
-          {% endfor %}
-          <span class="fw-bold ms-1">{{ coach.rating }}</span>
-          <span class="text-muted small">
-            ({{ coach.reviews|length }} review{{ '' if coach.reviews|length == 1 else 's' }})
-          </span>
-        </div>
+          <div class="d-flex align-items-center gap-1">
+            {% set full_stars = coach.rating|int %}
+            {% set has_half = (coach.rating - full_stars) >= 0.5 %}
+            {% for i in range(1, 6) %}
+              {% if i <= full_stars %}
+                <i class="bi bi-star-fill text-warning"></i>
+              {% elif has_half and i == full_stars + 1 %}
+                <i class="bi bi-star-half text-warning"></i>
+              {% else %}
+                <i class="bi bi-star text-warning"></i>
+              {% endif %}
+            {% endfor %}
+            <span class="fw-bold ms-1">{{ coach.rating }}</span>
+            <span class="text-muted small">
+              ({{ coach.reviews|length }} review{{ '' if coach.reviews|length == 1 else 's' }})
+            </span>
+          </div>
         {% else %}
-        <div class="d-flex align-items-center gap-1">
-          <span class="text-muted">No ratings yet</span>
-        </div>
+          <div class="d-flex align-items-center gap-1">
+            <span class="text-muted">No ratings yet</span>
+          </div>
         {% endif %}
 
         <!-- Experience -->
@@ -304,7 +304,7 @@
       </div>
     </div>
 
-    <!-- RIGHT: Booking card -->
+    <!-- RIGHT: Booking + Plan purchase -->
     <div class="col-lg-4" id="booking">
       <div class="card booking-section-panel border-0 shadow-sm rounded-4">
         <div class="card-header bg-primary bg-opacity-10 border-0 py-3 px-4">
@@ -325,6 +325,7 @@
               Coaches cannot book sessions from coach profiles. Use a hirer/student account to book.
             </p>
           {% else %}
+            <!-- Single-session booking form -->
             <form method="POST" action="{{ url_for('book_session', coach_id=coach.id) }}">
               <div class="mb-3">
                 <label class="form-label small text-muted">Sport</label>
@@ -347,13 +348,14 @@
                 <label class="form-label small text-muted">Preferred Time</label>
                 <select name="time" class="form-select form-select-sm" required>
                   <option value="">Select time slot</option>
-                  <option>06:00 AM</option>
-                  <option>07:00 AM</option>
-                  <option>08:00 AM</option>
-                  <option>04:00 PM</option>
-                  <option>05:00 PM</option>
-                  <option>06:00 PM</option>
+                  <option value="06:00">06:00 AM</option>
+                  <option value="07:00">07:00 AM</option>
+                  <option value="08:00">08:00 AM</option>
+                  <option value="16:00">04:00 PM</option>
+                  <option value="17:00">05:00 PM</option>
+                  <option value="18:00">06:00 PM</option>
                 </select>
+
               </div>
 
               <div class="mb-3">
@@ -379,6 +381,34 @@
                 You’ll see your booking under <strong>My Schedule</strong> in your dashboard.
               </p>
             </form>
+
+            <hr class="my-4">
+
+            <!-- Plan purchase (Fittr-style Pay & Start) -->
+            <div class="mb-2">
+              <h6 class="small text-uppercase text-muted fw-bold mb-2">Multi‑Session Plans</h6>
+              <p class="small text-muted mb-3">
+                Prefer a full program? Buy a pack and schedule sessions with your coach.
+              </p>
+            </div>
+
+            <!-- Example: 8 sessions pack; you can loop multiple packs later -->
+            <form method="POST" action="{{ url_for('create_plan_checkout', coach_id=coach.id) }}">
+              <!-- Use the first sport as default; you can add a selector if needed -->
+              {% set sports_list = coach.get_sports_list() %}
+              {% set selected_sport = sports_list[0] if sports_list else '' %}
+              <input type="hidden" name="sport" value="{{ selected_sport }}">
+              <input type="hidden" name="plan_name" value="8 Sessions Pack">
+              <input type="hidden" name="sessions_count" value="8">
+              <input type="hidden" name="price" value="5999">
+              <button type="submit" class="btn btn-outline-dark w-100 rounded-pill">
+                Pay ₹5,999 & Start
+              </button>
+            </form>
+
+            <p class="small text-muted mt-2 mb-0">
+              You’ll get a confirmation email and your coach will contact you to plan all sessions.
+            </p>
           {% endif %}
         </div>
       </div>
