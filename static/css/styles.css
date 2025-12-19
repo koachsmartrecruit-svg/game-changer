@@ -1282,3 +1282,89 @@ footer::before {
   background-color: rgba(15, 23, 42, 0.95);
   border-color: rgba(148, 163, 184, 0.5);
 }
+/* ===== PLAN MODAL (GameChanger Clean Style) ===== */
+
+.gc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  display: none;               /* JS se flex hoga */
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+.gc-modal-box {
+  background: #0b1120;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 1);
+  padding: 22px 24px 20px;
+  max-width: 420px;
+  width: 100%;
+  position: relative;
+  color: var(--gc-text-main);
+}
+
+.gc-modal-title {
+  font-family: 'Playfair Display', serif;
+  font-weight: 600;
+}
+
+.gc-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: none;
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--gc-text-muted);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.gc-modal-close:hover {
+  background: rgba(30, 64, 175, 0.9);
+  color: #f9fafb;
+}
+
+.gc-plan-option {
+  display: block;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: radial-gradient(circle at top left, #020617 0%, #020617 60%, #000000 100%);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.gc-plan-option:hover {
+  border-color: rgba(59, 130, 246, 0.9);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5);
+}
+
+.gc-plan-option input[type="radio"] {
+  margin-top: 2px;
+}
+
+.gc-plan-option input[type="radio"]:checked + * {
+  /* helper if needed */
+}
+
+.gc-plan-badge {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.18);  /* Gold/Orange */
+  color: #facc15;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

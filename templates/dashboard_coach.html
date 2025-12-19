@@ -134,7 +134,7 @@
   </div>
 
   <div class="row g-4 mb-5">
-    <!-- MY SCHEDULE (Bookings I made) -->
+    <!-- MY SCHEDULE -->
     <div class="col-lg-6">
       <div class="card border-0 rounded-4 h-100 overflow-hidden">
         <div class="card-header dashboard-card-header-primary">
@@ -198,7 +198,7 @@
       </div>
     </div>
 
-    <!-- CLIENT BOOKINGS (For coaches) -->
+    <!-- CLIENT BOOKINGS -->
     {% if current_user.role == 'coach' %}
     <div class="col-lg-6">
       <div class="card border-0 rounded-4 h-100 overflow-hidden">
@@ -309,7 +309,7 @@
   </div>
 
   <div class="row">
-    <!-- LEFT SIDEBAR: PROFILE / VERIFICATION -->
+    <!-- LEFT SIDEBAR -->
     <div class="col-lg-4 mb-4">
       <div class="card dashboard-sidebar-card text-center mb-4 position-sticky" style="top: 20px;">
         {% set display_name = coach.name if coach else current_user.name %}
@@ -462,56 +462,60 @@
                 <small class="text-muted">Your coaching credentials</small>
               </div>
             </div>
-                      <!-- TRAINING VENUE -->
-          <div class="card border-0 shadow-sm rounded-4 mb-5">
-            <div class="card-header border-0 py-3 px-4">
-              <h6 class="mb-0 text-uppercase small text-muted fw-bold">Training Venue</h6>
+
+            <!-- TRAINING VENUE (REQUIRED) -->
+            <div class="card border-0 shadow-sm rounded-4 mb-5">
+              <div class="card-header border-0 py-3 px-4">
+                <h6 class="mb-0 text-uppercase small text-muted fw-bold">Training Venue (Required)</h6>
+              </div>
+              <div class="card-body px-4 pb-4 pt-3">
+
+                <div class="mb-3">
+                  <label class="form-label small text-muted">Venue name</label>
+                  <input
+                    type="text"
+                    name="venue_name"
+                    class="form-control bg-light border-0 rounded-3"
+                    placeholder="e.g. ABC Turf, Andheri"
+                    value="{{ coach.venue_name if coach else '' }}"
+                    required
+                  >
+                  <div class="form-text small text-muted">
+                    This is where all your sessions will be conducted.
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small text-muted">Full venue address</label>
+                  <textarea
+                    name="venue_address"
+                    rows="2"
+                    class="form-control bg-light border-0 rounded-3"
+                    placeholder="Full address where students should come"
+                    required
+                  >{{ coach.venue_address if coach else '' }}</textarea>
+                  <div class="form-text small text-muted">
+                    Include area, city and landmark so students can find it easily.
+                  </div>
+                </div>
+
+                <div class="mb-1">
+                  <label class="form-label small text-muted">Google Maps link</label>
+                  <input
+                    type="url"
+                    name="venue_map_url"
+                    class="form-control bg-light border-0 rounded-3"
+                    placeholder="Paste Google Maps share link here"
+                    value="{{ coach.venue_map_url if coach else '' }}"
+                    required
+                  >
+                  <div class="form-text small text-muted">
+                    Open Google Maps → search your venue → Share → Copy link → paste here.
+                  </div>
+                </div>
+
+              </div>
             </div>
-            <div class="card-body px-4 pb-4 pt-3">
-
-              <div class="mb-3">
-                <label class="form-label small text-muted">Venue name</label>
-                <input
-                  type="text"
-                  name="venue_name"
-                  class="form-control bg-light border-0 rounded-3"
-                  placeholder="e.g. ABC Turf, Bellandur"
-                  value="{{ coach.venue_name if coach else '' }}"
-                >
-                <div class="form-text small text-muted">
-                  Short name students will recognize (turf / academy name).
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label small text-muted">Full venue address</label>
-                <textarea
-                  name="venue_address"
-                  rows="2"
-                  class="form-control bg-light border-0 rounded-3"
-                  placeholder="Full address where students should come"
-                >{{ coach.venue_address if coach else '' }}</textarea>
-                <div class="form-text small text-muted">
-                  Include area, city and landmark so Google Maps can find it easily.
-                </div>
-              </div>
-
-              <div class="mb-1">
-                <label class="form-label small text-muted">Google Maps link</label>
-                <input
-                  type="url"
-                  name="venue_map_url"
-                  class="form-control bg-light border-0 rounded-3"
-                  placeholder="Paste Google Maps share link here"
-                  value="{{ coach.venue_map_url if coach else '' }}"
-                >
-                <div class="form-text small text-muted">
-                  Open Google Maps → search your venue → Share → Copy link → paste here.
-                </div>
-              </div>
-
-            </div>
-          </div>
 
             <div class="mb-4">
               <label class="form-label small text-uppercase fw-bold text-muted">Headline</label>

@@ -1,23 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-6">
-      <div class="auth-card p-5 text-center">
-        <i class="bi bi-check-circle-fill text-success fs-1 mb-3"></i>
-        <h1 class="serif-font mb-2">You’re all set!</h1>
-        <p class="text-muted mb-4">
-          Your plan <strong>{{ plan.plan_name }}</strong> with
-          <strong>{{ plan.coach.name }}</strong> is now active.
-        </p>
-        <p class="text-muted small mb-4">
-          Your coach will contact you soon to schedule your sessions.
-        </p>
-        <a href="{{ url_for('coach_dashboard') }}" class="btn btn-primary rounded-pill px-4">
-          Go to Dashboard
-        </a>
-      </div>
-    </div>
+  <div class="card dashboard-form-card p-4 text-center">
+    <h3 class="serif-font mb-2">Plan Confirmed</h3>
+    <p class="text-muted mb-3">
+      Your plan <strong>{{ plan.planname }}</strong> for
+      <strong>{{ plan.sport }}</strong> is now
+      <strong>{{ plan.status }}</strong>.
+    </p>
+    <p class="small text-muted">
+      Sessions: {{ plan.sessionscount }} · Amount: ₹{{ plan.price }}
+    </p>
+    <a href="{{ url_for('coach_dashboard') }}" class="btn btn-primary rounded-pill mt-3">
+      Go to Dashboard
+    </a>
   </div>
 </div>
 {% endblock %}

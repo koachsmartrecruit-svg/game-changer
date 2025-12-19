@@ -14,7 +14,7 @@
         </div>
 
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-            <div class="card-header bg-white border-bottom p-4">
+            <div class="card-header bg-dark border-bottom p-4">
                 <h5 class="mb-0 fw-bold"><i class="bi bi-calendar-week me-2 text-primary"></i> Weekly Schedule</h5>
             </div>
             <div class="card-body p-0">
@@ -35,11 +35,11 @@
                                 <div class="col-md-8">
                                     <div class="row g-2 align-items-center">
                                         <div class="col-5">
-                                            <input type="time" class="form-control bg-light border-0 rounded-3" name="day_{{ day }}_start" value="09:00">
+                                            <input type="time" class="form-control bg-dark border-0 rounded-3" name="day_{{ day }}_start" value="09:00">
                                         </div>
                                         <div class="col-2 text-center text-muted small">TO</div>
                                         <div class="col-5">
-                                            <input type="time" class="form-control bg-light border-0 rounded-3" name="day_{{ day }}_end" value="17:00">
+                                            <input type="time" class="form-control bg-dark border-0 rounded-3" name="day_{{ day }}_end" value="17:00">
                                         </div>
                                     </div>
                                 </div>
@@ -48,7 +48,7 @@
                         {% endfor %}
                     </div>
 
-                    <div class="p-4 bg-light border-top">
+                    <div class="p-4 bg-dark border-top">
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-uppercase">Block Specific Dates (Vacation)</label>
                             <input type="text" name="blocked_dates" class="form-control border-0 shadow-sm rounded-3" placeholder="e.g. 2025-12-25, 2026-01-01">

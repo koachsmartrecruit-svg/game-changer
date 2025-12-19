@@ -287,7 +287,7 @@
               <div class="mb-3">
                 <label class="form-label small text-muted">Your feedback (optional)</label>
                 <textarea name="comment" rows="3"
-                          class="form-control bg-light border-0 rounded-3"
+                          class="form-control bg-dark border-0 rounded-3"
                           placeholder="Share how the session helped you..."></textarea>
               </div>
               <button type="submit"
@@ -340,7 +340,7 @@
               <div class="mb-3">
                 <label class="form-label small text-muted">Date</label>
                 <input type="date" name="date"
-                       class="form-control form-control-sm bg-light border-0"
+                       class="form-control form-control-sm bg-dark border-0"
                        required>
               </div>
 
@@ -359,16 +359,23 @@
               </div>
 
               <div class="mb-3">
-                <label class="form-label small text-muted">Location (optional)</label>
-                <input type="text" name="location"
-                       class="form-control form-control-sm bg-light border-0"
-                       placeholder="Academy ground / Turf name / Landmark">
+              <label class="form-label small text-muted">Venue</label>
+              <div class="small text-muted">
+                Sessions are held at <strong>{{ coach.venue_name }}</strong><br>
+                {{ coach.venue_address }}
+                {% if coach.venue_map_url %}
+                  <br>
+                  <a href="{{ coach.venue_map_url }}" target="_blank" class="small">
+                    View on Google Maps
+                  </a>
+                {% endif %}
               </div>
+            </div>
 
               <div class="mb-3">
                 <label class="form-label small text-muted">Note for Coach (optional)</label>
                 <textarea name="message" rows="3"
-                          class="form-control form-control-sm bg-light border-0"
+                          class="form-control form-control-sm bg-dark border-0"
                           placeholder="Share level, age, or anything important..."></textarea>
               </div>
 
@@ -415,6 +422,69 @@
     </div>
   </div>
 </div>
+<!-- PLAN SELECTION MODAL -->
+<div id="planModal" class="gc-modal-overlay">
+  <div class="gc-modal-box">
+    <button type="button" class="gc-modal-close" id="planModalClose">
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <h5 class="gc-modal-title mb-3">Select Your Plan</h5>
+    <p class="small text-muted mb-4">
+      Choose a training plan that fits your goal.
+    </p>
+
+    <form id="planForm" method="POST" action="{{ url_for('create_plan_checkout', coach_id=coach.id) }}">
+      {% set sports_list = coach.get_sports_list() %}
+      {% set selected_sport = sports_list[0] if sports_list else '' %}
+      <input type="hidden" name="sport" value="{{ selected_sport }}">
+      <input type="hidden" name="plan_name" id="plan_name_input" value="Monthly Training">
+      <input type="hidden" name="sessions_count" id="sessions_count_input" value="4">
+      <input type="hidden" name="price" id="price_input" value="2000">
+
+      <!-- Option 1 -->
+      <label class="gc-plan-option">
+        <div class="d-flex align-items-center w-100">
+          <input type="radio" class="form-check-input me-3" name="plan_choice"
+                 value="monthly" checked>
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Monthly Training</span>
+              <span class="fw-bold">₹2,000</span>
+            </div>
+            <div class="small text-muted">
+              4 sessions · Ideal for regular practice
+            </div>
+          </div>
+        </div>
+      </label>
+
+      <!-- Option 2 -->
+      <label class="gc-plan-option">
+        <div class="d-flex align-items-center w-100">
+          <input type="radio" class="form-check-input me-3" name="plan_choice"
+                 value="quarterly">
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Quarterly Transformation</span>
+              <div class="text-end">
+                <span class="fw-bold d-block">₹5,000</span>
+                <span class="gc-plan-badge">Best Value · Save 20%</span>
+              </div>
+            </div>
+            <div class="small text-muted">
+              12 sessions · Deep skill & fitness work
+            </div>
+          </div>
+        </div>
+      </label>
+
+      <button type="submit" class="btn btn-primary w-100 rounded-pill mt-3">
+        Proceed to Pay
+      </button>
+    </form>
+  </div>
+</div>
 
 <script>
   // Prevent selecting past dates on the booking form
@@ -436,6 +506,76 @@
       });
     }
   });
+    document.addEventListener("DOMContentLoaded", function () {
+    const dateInput = document.querySelector('input[name="date"]');
+    if (dateInput) {
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.min = today;
+    }
+
+    const bookingForm = document.querySelector('form[action*="book_session"]');
+    const bookingBtn = document.getElementById('bookingBtn');
+    const bookingBtnText = document.getElementById('bookingBtnText');
+
+    if (bookingForm && bookingBtn) {
+      bookingForm.addEventListener('submit', function () {
+        bookingBtn.disabled = true;
+        bookingBtnText.textContent = 'Processing...';
+      });
+    }
+
+    // ==== PLAN MODAL LOGIC ====
+    const planModal = document.getElementById('planModal');
+    const planModalClose = document.getElementById('planModalClose');
+    const planForm = document.getElementById('planForm');
+
+    const planNameInput = document.getElementById('plan_name_input');
+    const sessionsInput = document.getElementById('sessions_count_input');
+    const priceInput = document.getElementById('price_input');
+
+    // Button jo modal kholega: existing "Pay ₹5,999 & Start" ki jagah
+    const openPlanBtn = document.querySelector('#booking button.btn-outline-dark');
+
+    if (openPlanBtn && planModal) {
+      openPlanBtn.type = 'button'; // direct submit mat kare
+      openPlanBtn.addEventListener('click', function () {
+        planModal.style.display = 'flex';
+      });
+    }
+
+    if (planModalClose) {
+      planModalClose.addEventListener('click', function () {
+        planModal.style.display = 'none';
+      });
+    }
+
+    // Outside click to close
+    if (planModal) {
+      planModal.addEventListener('click', function (e) {
+        if (e.target === planModal) {
+          planModal.style.display = 'none';
+        }
+      });
+    }
+
+    // Radio change: values set karo
+    if (planForm) {
+      planForm.addEventListener('change', function (e) {
+        if (e.target.name === 'plan_choice') {
+          if (e.target.value === 'monthly') {
+            planNameInput.value = 'Monthly Training';
+            sessionsInput.value = 4;
+            priceInput.value = 2000;
+          } else if (e.target.value === 'quarterly') {
+            planNameInput.value = 'Quarterly Transformation';
+            sessionsInput.value = 12;
+            priceInput.value = 5000;
+          }
+        }
+      });
+    }
+  });
+
 </script>
 
 {% endblock %}

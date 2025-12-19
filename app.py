@@ -477,12 +477,14 @@ class Coach(db.Model):
     venue_address = db.Column(db.String(500))     # full address students should come to
     venue_map_url = db.Column(db.String(500))     # Google Maps share link
 
+    # NEW: availability (blocked dates etc.)
+    availability_json = db.Column(db.Text, default="{}")  # date -> info dict
+
     # Relationships
     reviews = db.relationship(
         "Review", backref="coach", lazy=True, cascade="all, delete-orphan"
     )
     bookings_received = db.relationship("Booking", backref="coach", lazy=True)
-
     def get_whatsapp_url(self):
         if not self.phone:
             return "#"
@@ -611,7 +613,7 @@ def create_plan_checkout(coach_id):
                 "plan_id": plan.id,
                 "coach_id": coach.id,
             },
-            success_url=url_for("plan_success", plan_id=plan.id, _external=True) + "?paymentsuccess=1",
+            success_url = url_for("plan_success", plan_id=plan.id, _external=True) + "?paymentsuccess=1",
             cancel_url=url_for("coach_detail", slug=coach.slug, _external=True) + "?paymentcancelled=1",
         )
         return redirect(checkout_session.url, code=303)
@@ -621,6 +623,19 @@ def create_plan_checkout(coach_id):
         db.session.commit()
         flash("Error initializing payment. Please try again.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
+@app.route("/plans/success/<int:plan_id>")
+@login_required
+def plan_success(plan_id):
+    plan = PlanPurchase.query.get_or_404(plan_id)
+
+    if plan.user_id != current_user.id:
+        flash("You are not allowed to view this plan.", "danger")
+        return redirect(url_for("home"))
+
+    if plan.status != "Active":
+        flash("Your payment is still being processed. Please check again in a minute.", "info")
+
+    return render_template("plan_success.html", plan=plan)
 
 @app.route("/plans")
 def plans():
@@ -1010,21 +1025,51 @@ def coaches():
         price_min=price_min,
         price_max=price_max,
     )
-
 @app.route("/coach/availability")
 @coach_required
 def coach_availability():
+    coach = current_user.coach_profile
 
-    return render_template("coach_availability.html")
+    # Parse availability JSON -> dict
+    availability = {}
+    if coach and coach.availability_json:
+        try:
+            availability = json.loads(coach.availability_json)
+        except Exception:
+            availability = {}
+
+    # Example: availability = {"2025-12-25": {"blocked": true}, "2025-12-31": {"blocked": false}}
+
+    return render_template(
+        "coach_availability.html",
+        coach=coach,
+        availability=availability,
+    )
 
 
 @app.route("/coach/availability/update", methods=["POST"])
 @coach_required
 def update_availability():
+    coach = current_user.coach_profile
+    if not coach:
+        flash("Create your coach profile first.", "danger")
+        return redirect(url_for("coach_dashboard"))
+
+    # Expect frontend to send list of blocked dates as ISO strings
+    # e.g. <input type="hidden" name="blocked_dates" value="2025-12-24,2025-12-25">
+    blocked_str = (request.form.get("blocked_dates") or "").strip()
+    blocked_dates = [d.strip() for d in blocked_str.split(",") if d.strip()]
+
+    # Build availability dict
+    availability = {}
+    for d in blocked_dates:
+        availability[d] = {"blocked": True}
+
+    coach.availability_json = json.dumps(availability)
+    db.session.commit()
 
     flash("Availability schedule updated successfully!", "success")
     return redirect(url_for("coach_dashboard"))
-
 
 @app.route("/coaches/<slug>")
 def coach_detail(slug):
@@ -1047,7 +1092,6 @@ def coach_detail(slug):
         specialties=specialties,
         can_review=can_review,
     )
-
 @app.route("/book/<int:coach_id>", methods=["POST"])
 @hirer_required
 def book_session(coach_id):
@@ -1075,13 +1119,33 @@ def book_session(coach_id):
         flash("Invalid sport selected.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 
+    # Sport-wise price (fallback: coach.price_per_session)
+    price_per_session = coach.price_per_session
+    try:
+        price_map = coach.get_price_dict() or {}
+        if sport in price_map:
+            price_per_session = int(price_map[sport])
+    except Exception:
+        pass
+
     # Validate date
     date_valid, date_result = validate_date(date_str)
     if not date_valid:
         flash(date_result, "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
     date_obj = date_result
+    # Blocked date check
+    availability = {}
+    if coach.availability_json:
+        try:
+            availability = json.loads(coach.availability_json)
+        except Exception:
+            availability = {}
 
+    date_key = date_obj.strftime("%Y-%m-%d")
+    if date_key in availability and availability[date_key].get("blocked"):
+        flash("Coach is unavailable on this date. Please choose another day.", "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
     # Validate time
     time_valid, time_result = validate_time(time_slot)
     if not time_valid:
@@ -1108,8 +1172,9 @@ def book_session(coach_id):
         flash("This time slot is already booked. Please choose another.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 
+    # Initial status based on price
     initial_status = "Payment Pending"
-    if coach.price_per_session == 0:
+    if price_per_session == 0:
         initial_status = "Confirmed"
 
     new_booking = Booking(
@@ -1120,13 +1185,14 @@ def book_session(coach_id):
         booking_time=time_result,
         message=sanitize_input(message, max_length=1000),
         location=sanitize_input(location, max_length=255),
-        status=initial_status, 
+        status=initial_status,
     )
 
     db.session.add(new_booking)
     db.session.commit()
 
-    if coach.price_per_session == 0:
+    # Free bookings – no payment
+    if price_per_session == 0:
         flash("Booking confirmed!", "success")
         return redirect(url_for("coach_dashboard"))
 
@@ -1134,11 +1200,11 @@ def book_session(coach_id):
     try:
         checkout_session = stripe.checkout.Session.create(
             mode="payment",
-            customer_email=current_user.email, # Pre-fill user email
+            customer_email=current_user.email,  # Pre-fill user email
             line_items=[{
                 'price_data': {
                     'currency': 'inr',
-                    'unit_amount': int(coach.price_per_session * 100),
+                    'unit_amount': int(price_per_session * 100),
                     'product_data': {
                         'name': f"Training with {coach.name}",
                         'description': f"{sport} Session on {date_str} at {time_slot}",
@@ -1147,7 +1213,7 @@ def book_session(coach_id):
                 'quantity': 1,
             }],
             metadata={
-                'booking_id': new_booking.id, 
+                'booking_id': new_booking.id,
                 'type': 'coach_booking'
             },
             success_url=url_for('coach_dashboard', _external=True) + "?payment=success",
@@ -1161,6 +1227,7 @@ def book_session(coach_id):
         db.session.commit()
         flash("Error initializing payment. Please try again.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
+
 @app.route("/booking/<int:booking_id>/status", methods=["POST"])
 @coach_required
 def update_booking_status(booking_id):
@@ -1443,14 +1510,12 @@ def verify_coach():
     else:
         flash("Invalid OTP. Please try again.", "danger")
     return redirect(url_for("coach_dashboard"))
-
 @app.route("/dashboard", methods=["GET", "POST"])
 @login_required
 def coach_dashboard():
     coach = current_user.coach_profile
-    
+
     # --- 1. HANDLE POST REQUEST (PROFILE UPDATE) ---
-    # Yeh block sabse pehle chalega agar user form submit karta hai
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
         tagline = (request.form.get("tagline") or "").strip()
@@ -1464,17 +1529,28 @@ def coach_dashboard():
         phone = (request.form.get("phone") or "").strip()
         travel_raw = (request.form.get("travel_radius") or "").strip()
 
+        # NEW: venue fields
+        venue_name = (request.form.get("venue_name") or "").strip()
+        venue_address = (request.form.get("venue_address") or "").strip()
+        venue_map_url = (request.form.get("venue_map_url") or "").strip()
+
         # Validation flags
         valid = True
-        
+
         name_valid, name_msg = validate_name(name)
         if not name_valid:
             flash(name_msg, "danger")
             valid = False
-            
+
         if not city or len(city.strip()) < 2:
             flash("City is required.", "danger")
             valid = False
+
+        # Venue mandatory for coaches
+        if current_user.role == "coach":
+            if not venue_name or not venue_address or not venue_map_url:
+                flash("Please fill venue name, full address and Google Maps link.", "danger")
+                valid = False
 
         try:
             exp = int(exp_raw) if exp_raw else 0
@@ -1489,18 +1565,18 @@ def coach_dashboard():
         if not selected_sports:
             flash("Select at least one sport.", "danger")
             valid = False
-        
+
         # Agar saari validation pass ho gayi, tabhi DB update karein
         if valid:
             prices_dict = {}
             for sport in selected_sports:
                 p = request.form.get(f"price_{sport}", "0").strip()
                 prices_dict[sport] = int(p) if p.isdigit() else 0
-            
+
             sports_str = ",".join(selected_sports)
             prices_json = json.dumps(prices_dict)
             starting_price = min(prices_dict.values()) if prices_dict else 0
-            
+
             # Handle Image Upload
             image_filename = coach.profile_image if coach else "default_coach.jpg"
             if "profile_image" in request.files:
@@ -1509,50 +1585,69 @@ def coach_dashboard():
                     file_valid, file_msg = validate_file_upload(file)
                     if file_valid:
                         ext = file.filename.rsplit(".", 1)[1].lower()
-                        new_filename = secure_filename(f"coach_{current_user.id}_{int(datetime.now().timestamp())}.{ext}")
-                        # NOTE: Production me S3 use karna chahiye, local ke liye yeh thik hai
+                        new_filename = secure_filename(
+                            f"coach_{current_user.id}_{int(datetime.now().timestamp())}.{ext}"
+                        )
                         file.save(os.path.join(app.config["UPLOAD_FOLDER"], new_filename))
                         image_filename = new_filename
                     else:
                         flash(file_msg, "danger")
                         valid = False
 
-            if valid:
-                if coach is None:
-                    # Create new profile
-                    slug = create_slug(name, sports_str)
-                    coach = Coach(
-                        user_id=current_user.id, slug=slug, name=sanitize_input(name),
-                        sport=sports_str, sports_prices=prices_json, city=sanitize_input(city),
-                        state=sanitize_input(state), pincode=sanitize_input(pincode),
-                        price_per_session=starting_price, experience_years=exp, age=age,
-                        phone=sanitize_input(phone), tagline=sanitize_input(tagline),
-                        specialties=sanitize_input(specialties), profile_image=image_filename,
-                        achievements=sanitize_input(achievements), travel_radius=travel_radius, rating=0.0
-                    )
-                    db.session.add(coach)
-                else:
-                    # Update existing profile
-                    coach.name = sanitize_input(name)
-                    coach.sport = sports_str
-                    coach.sports_prices = prices_json
-                    coach.city = sanitize_input(city)
-                    coach.state = sanitize_input(state)
-                    coach.pincode = sanitize_input(pincode)
-                    coach.price_per_session = starting_price
-                    coach.experience_years = exp
-                    coach.age = age
-                    coach.phone = sanitize_input(phone)
-                    coach.tagline = sanitize_input(tagline)
-                    coach.specialties = sanitize_input(specialties)
-                    coach.profile_image = image_filename
-                    coach.achievements = sanitize_input(achievements)
-                    coach.travel_radius = travel_radius
+        if valid:
+            if coach is None:
+                # Create new profile
+                slug = create_slug(name, sports_str)
+                coach = Coach(
+                    user_id=current_user.id,
+                    slug=slug,
+                    name=sanitize_input(name),
+                    sport=sports_str,
+                    sports_prices=prices_json,
+                    city=sanitize_input(city),
+                    state=sanitize_input(state),
+                    pincode=sanitize_input(pincode),
+                    price_per_session=starting_price,
+                    experience_years=exp,
+                    age=age,
+                    phone=sanitize_input(phone),
+                    tagline=sanitize_input(tagline),
+                    specialties=sanitize_input(specialties),
+                    profile_image=image_filename,
+                    achievements=sanitize_input(achievements),
+                    travel_radius=travel_radius,
+                    rating=0.0,
+                    # NEW: venue fields
+                    venue_name=sanitize_input(venue_name, max_length=120),
+                    venue_address=sanitize_input(venue_address, max_length=255),
+                    venue_map_url=sanitize_input(venue_map_url, max_length=255),
+                )
+                db.session.add(coach)
+            else:
+                # Update existing profile
+                coach.name = sanitize_input(name)
+                coach.sport = sports_str
+                coach.sports_prices = prices_json
+                coach.city = sanitize_input(city)
+                coach.state = sanitize_input(state)
+                coach.pincode = sanitize_input(pincode)
+                coach.price_per_session = starting_price
+                coach.experience_years = exp
+                coach.age = age
+                coach.phone = sanitize_input(phone)
+                coach.tagline = sanitize_input(tagline)
+                coach.specialties = sanitize_input(specialties)
+                coach.profile_image = image_filename
+                coach.achievements = sanitize_input(achievements)
+                coach.travel_radius = travel_radius
+                # NEW: venue fields
+                coach.venue_name = sanitize_input(venue_name, max_length=120)
+                coach.venue_address = sanitize_input(venue_address, max_length=255)
+                coach.venue_map_url = sanitize_input(venue_map_url, max_length=255)
 
-                db.session.commit()
-                flash("Profile updated successfully!", "success")
-                return redirect(url_for("coach_dashboard"))
-
+            db.session.commit()
+            flash("Profile updated successfully!", "success")
+            return redirect(url_for("coach_dashboard"))
     # --- 2. PREPARE DATA FOR TEMPLATE (GET Request) ---
     # Yeh logic tab chalega jab page load hoga (ya agar POST fail ho gaya)
     
