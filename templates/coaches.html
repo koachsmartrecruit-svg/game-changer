@@ -94,82 +94,87 @@
       </div>
     </div>
   </div>
-
   <!-- COACH CARDS GRID -->
   <div class="row g-4 mb-5">
     {% if coaches %}
       {% for coach in coaches %}
         <div class="col-md-4">
-          <div class="card h-100 border-0 rounded-4 hover-lift coach-card">
+          {# WRAP ENTIRE CARD IN LINK #}
+          <a href="{{ url_for('coach_detail', slug=coach.slug) }}"
+             class="coach-card-link text-decoration-none">
 
-            <!-- TOP ROW: avatar + rating -->
-            <div class="d-flex justify-content-between align-items-start px-4 pt-4">
-              <div class="d-flex align-items-center gap-3">
-                {% if coach.profile_image %}
-                  <div class="coach-avatar-shell-circle">
-                    <img
-                      src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}"
-                      alt="{{ coach.name }}"
-                      class="coach-avatar-img"
-                      onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.classList.remove('d-none');">
-                    <div class="coach-avatar-initial-circle d-none">
-                      <span>{{ coach.name[0].upper() }}</span>
+            <div class="card h-100 border-0 rounded-4 hover-lift coach-card">
+
+              <!-- TOP ROW: avatar + rating -->
+              <div class="d-flex justify-content-between align-items-start px-4 pt-4">
+                <div class="d-flex align-items-center gap-3">
+                  {% if coach.profile_image %}
+                    <div class="coach-avatar-shell-circle">
+                      <img
+                        src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}"
+                        alt="{{ coach.name }}"
+                        class="coach-avatar-img"
+                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.classList.remove('d-none');">
+                      <div class="coach-avatar-initial-circle d-none">
+                        <span>{{ coach.name[0].upper() }}</span>
+                      </div>
                     </div>
-                  </div>
-                {% else %}
-                  <div class="coach-avatar-shell-circle">
-                    <div class="coach-avatar-initial-circle">
-                      <span>{{ coach.name[0].upper() }}</span>
+                  {% else %}
+                    <div class="coach-avatar-shell-circle">
+                      <div class="coach-avatar-initial-circle">
+                        <span>{{ coach.name[0].upper() }}</span>
+                      </div>
                     </div>
+                  {% endif %}
+                  <div class="small text-muted">
+                    {{ coach.city or '' }}
                   </div>
+                </div>
+
+                {% if coach.rating > 0 %}
+                  <span class="small fw-semibold px-3 py-1 rounded-pill"
+                        style="background: rgba(15,23,42,0.95); color: #FACC15;">
+                    ★ {{ coach.rating }}
+                  </span>
                 {% endif %}
-                <div class="small text-muted">
-                  {{ coach.city or '' }}
+              </div>
+
+              <!-- BODY -->
+              <div class="card-body p-4 pt-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="coach-card-sport">
+                    {{ coach.sport.split(',')[0] }}
+                  </span>
+                  {% if coach.is_verified %}
+                    <i class="bi bi-patch-check-fill text-primary" title="Verified"></i>
+                  {% endif %}
+                </div>
+
+                <h4 class="card-title coach-card-title mb-1 fw-bold">
+                  {{ coach.name }}
+                </h4>
+                <p class="text-muted small mb-3 text-truncate">
+                  {{ coach.tagline }}
+                </p>
+
+                <hr class="opacity-10">
+
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold coach-card-price">
+                    ₹{{ coach.price_per_session }}
+                    <span>/ session</span>
+                  </span>
+
+                  {# ARROW LOOKS LIKE A BUTTON BUT NO NESTED <a> #}
+                  <div class="coach-card-arrow btn btn-primary rounded-circle d-flex align-items-center justify-content-center"
+                       style="width: 40px; height: 40px;">
+                    <i class="bi bi-arrow-right"></i>
+                  </div>
                 </div>
               </div>
 
-              {% if coach.rating > 0 %}
-                <span class="small fw-semibold px-3 py-1 rounded-pill"
-                      style="background: rgba(15,23,42,0.95); color: #FACC15;">
-                  ★ {{ coach.rating }}
-                </span>
-              {% endif %}
             </div>
-
-            <!-- BODY -->
-            <div class="card-body p-4 pt-3">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="coach-card-sport">
-                  {{ coach.sport.split(',')[0] }}
-                </span>
-                {% if coach.is_verified %}
-                  <i class="bi bi-patch-check-fill text-primary" title="Verified"></i>
-                {% endif %}
-              </div>
-
-              <h4 class="card-title coach-card-title mb-1 fw-bold">
-                {{ coach.name }}
-              </h4>
-              <p class="text-muted small mb-3 text-truncate">
-                {{ coach.tagline }}
-              </p>
-
-              <hr class="opacity-10">
-
-              <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-bold coach-card-price">
-                  ₹{{ coach.price_per_session }}
-                  <span>/ session</span>
-                </span>
-                <a href="{{ url_for('coach_detail', slug=coach.slug) }}"
-                   class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center"
-                   style="width: 40px; height: 40px;">
-                  <i class="bi bi-arrow-right"></i>
-                </a>
-              </div>
-            </div>
-
-          </div>
+          </a>
         </div>
       {% endfor %}
     {% else %}

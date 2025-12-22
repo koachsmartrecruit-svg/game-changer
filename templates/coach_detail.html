@@ -8,18 +8,23 @@
   <div class="row g-4 mb-4 align-items-center">
     <div class="col-md-3 text-center text-md-start">
       {% set display_name = coach.name %}
+
       {% if coach.profile_image %}
-        <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}"
-             class="rounded-4 shadow-sm mb-3"
-             style="width: 180px; height: 180px; object-fit: cover;"
-             alt="{{ display_name }}"
-             onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-        <div class="gradient-avatar avatar-lg mb-3" style="display: none;">
-          <span class="avatar-initial">{{ display_name[0].upper() }}</span>
+        <div class="coach-detail-avatar mb-3">
+          <img
+            src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}"
+            alt="{{ display_name }}"
+            class="coach-detail-avatar-img"
+            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.classList.remove('d-none');">
+          <div class="coach-detail-avatar-fallback d-none">
+            <span>{{ display_name[0].upper() }}</span>
+          </div>
         </div>
       {% else %}
-        <div class="gradient-avatar avatar-lg mb-3">
-          <span class="avatar-initial">{{ display_name[0].upper() }}</span>
+        <div class="coach-detail-avatar mb-3">
+          <div class="coach-detail-avatar-fallback">
+            <span>{{ display_name[0].upper() }}</span>
+          </div>
         </div>
       {% endif %}
 
