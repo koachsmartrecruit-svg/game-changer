@@ -1700,7 +1700,52 @@ def coach_dashboard():
         "stats": stats,
     }
     
-    return render_template("dashboard_coach.html", **context)
+    return render_template("dashboard_overview.html", **context)
+@app.route("/dashboard/bookings")
+@coach_required
+def coach_bookings():
+    coach = current_user.coach_profile
+    booking_filter = request.args.get("filter", "all").lower()
+
+    def apply_booking_filter(query):
+        today = datetime.now().date()
+        if booking_filter == "pending":
+            return query.filter_by(status="Pending")
+        if booking_filter == "confirmed":
+            return query.filter_by(status="Confirmed")
+        if booking_filter == "rejected":
+            return query.filter_by(status="Rejected")
+        if booking_filter == "upcoming":
+            return query.filter(Booking.booking_date >= today)
+        return query
+
+    received_bookings = []
+    if coach:
+        q = Booking.query.filter_by(coach_id=coach.id)
+        received_bookings = apply_booking_filter(q).order_by(
+            Booking.booking_date.desc()
+        ).all()
+
+    return render_template(
+        "dashboard_bookings.html",
+        received_bookings=received_bookings,
+        booking_filter=booking_filter,
+    )
+@app.route("/dashboard/profile", methods=["GET", "POST"])
+@coach_required
+def coach_profile():
+    coach = current_user.coach_profile
+
+    if request.method == "POST":
+        # reuse your EXISTING POST logic
+        return redirect(url_for("coach_dashboard"))
+
+    return render_template(
+        "dashboard_profile.html",
+        coach=coach,
+        sports_list=SPORTS_LIST,
+    )
+
 # ---------- STRIPE CHECKOUT & WEBHOOK ROUTES ----------
 @app.route("/create-checkout-session/<plan>", methods=["POST", "GET"])
 @login_required

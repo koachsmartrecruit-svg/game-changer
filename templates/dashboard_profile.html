@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-4 py-lg-5">
+
+  <!-- ================= HEADER ================= -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h2 serif-font mb-0">Coach Profile</h1>
+      <p class="text-muted mb-0">Manage how students see you</p>
+    </div>
+
+    <div class="btn-group shadow-sm">
+      <a href="{{ url_for('coach_dashboard') }}"
+         class="btn btn-outline-dark">Overview</a>
+      <a href="{{ url_for('coach_bookings') }}"
+         class="btn btn-outline-dark">Bookings</a>
+      <a href="{{ url_for('coach_profile') }}"
+         class="btn btn-dark active">Profile</a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- ================= LEFT: PROFILE SIDEBAR ================= -->
+    <div class="col-lg-4">
+      <div class="card border-0 rounded-4 text-center p-4 sticky-top" style="top: 20px;">
+
+        {% set display_name = coach.name if coach else current_user.name %}
+
+        <!-- Avatar -->
+        <div class="mb-3">
+          {% if coach and coach.profile_image %}
+            <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}"
+                 class="rounded-circle shadow-sm border"
+                 width="96" height="96"
+                 style="object-fit: cover;"
+                 alt="{{ display_name }}">
+          {% else %}
+            <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center mx-auto"
+                 style="width:96px;height:96px;font-size:32px;">
+              {{ display_name[0].upper() }}
+            </div>
+          {% endif %}
+        </div>
+
+        <h4 class="fw-bold mb-1">{{ display_name }}</h4>
+        <p class="text-muted small mb-2">{{ current_user.email }}</p>
+
+        <hr class="opacity-25">
+
+        <!-- Verification -->
+        {% if coach and coach.is_verified %}
+          <div class="alert alert-success border-0 rounded-4 small">
+            <i class="bi bi-patch-check-fill me-1"></i>
+            Verified Coach
+          </div>
+        {% elif coach %}
+          <div class="alert alert-warning border-0 rounded-4 small">
+            <i class="bi bi-shield-exclamation me-1"></i>
+            Verification Pending
+          </div>
+
+          <button id="sendOtpBtn"
+                  class="btn btn-primary btn-sm rounded-pill w-100 mb-2">
+            Send OTP
+          </button>
+
+          <form action="{{ url_for('verify_coach') }}" method="POST">
+            <div class="input-group input-group-sm">
+              <input type="text" name="code"
+                     class="form-control"
+                     placeholder="Enter OTP" required>
+              <button class="btn btn-primary">Verify</button>
+            </div>
+          </form>
+        {% else %}
+          <div class="alert alert-info border-0 rounded-4 small">
+            Complete your profile to unlock verification.
+          </div>
+        {% endif %}
+
+        {% if coach %}
+        <a href="{{ url_for('coach_detail', slug=coach.slug) }}"
+           target="_blank"
+           class="btn btn-outline-dark btn-sm rounded-pill w-100 mt-3">
+          View Public Profile
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ================= RIGHT: PROFILE FORM ================= -->
+    <div class="col-lg-8">
+      <form method="POST" enctype="multipart/form-data">
+        <div class="card border-0 rounded-4 p-4 p-lg-5">
+
+          <!-- ACCOUNT DETAILS -->
+          <h5 class="fw-bold mb-3">Account Details</h5>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label small">Full Name</label>
+              <input type="text" name="name"
+                     class="form-control"
+                     value="{{ coach.name if coach else current_user.name }}">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small">Profile Photo</label>
+              <input type="file" name="profile_image"
+                     class="form-control">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small">City</label>
+              <input type="text" name="city"
+                     class="form-control"
+                     value="{{ coach.city if coach else '' }}">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small">State</label>
+              <input type="text" name="state"
+                     class="form-control"
+                     value="{{ coach.state if coach else '' }}">
+            </div>
+          </div>
+
+          <!-- PROFESSIONAL PROFILE -->
+          <h5 class="fw-bold mb-3">Professional Profile</h5>
+
+          <!-- Venue -->
+          <div class="mb-3">
+            <label class="form-label small">Training Venue</label>
+            <input type="text" name="venue_name"
+                   class="form-control"
+                   value="{{ coach.venue_name if coach else '' }}"
+                   placeholder="Venue name" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small">Venue Address</label>
+            <textarea name="venue_address"
+                      class="form-control"
+                      rows="2"
+                      required>{{ coach.venue_address if coach else '' }}</textarea>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small">Google Maps Link</label>
+            <input type="url" name="venue_map_url"
+                   class="form-control"
+                   value="{{ coach.venue_map_url if coach else '' }}"
+                   required>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <label class="form-label small">Age</label>
+              <input type="number" name="age"
+                     class="form-control"
+                     value="{{ coach.age if coach else '' }}">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">Experience (Years)</label>
+              <input type="number" name="experience_years"
+                     class="form-control"
+                     value="{{ coach.experience_years if coach else '' }}">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">Travel Radius (km)</label>
+              <input type="number" name="travel_radius"
+                     class="form-control"
+                     value="{{ coach.travel_radius if coach else 0 }}">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">Phone</label>
+              <input type="text" name="phone"
+                     class="form-control"
+                     value="{{ coach.phone if coach else '' }}">
+            </div>
+          </div>
+
+          <!-- SPORTS & PRICING -->
+          <h5 class="fw-bold mb-3">Sports & Pricing</h5>
+          <div class="row g-2 mb-4">
+            {% set current_sports = coach.get_sports_list() if coach else [] %}
+            {% set price_map = coach.get_price_dict() if coach else {} %}
+            {% for sport in sports_list %}
+            <div class="col-md-6">
+              <div class="d-flex align-items-center border rounded p-2">
+                <input type="checkbox" class="form-check-input me-2"
+                       name="sports" value="{{ sport }}"
+                       {% if sport in current_sports %}checked{% endif %}>
+                <strong class="me-auto">{{ sport }}</strong>
+                <input type="number"
+                       name="price_{{ sport }}"
+                       class="form-control form-control-sm text-end"
+                       placeholder="₹"
+                       style="max-width: 90px;"
+                       value="{{ price_map.get(sport, '') }}">
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- BIO -->
+          <h5 class="fw-bold mb-3">Bio & Achievements</h5>
+          <div class="mb-3">
+            <label class="form-label small">Achievements</label>
+            <textarea name="achievements"
+                      class="form-control"
+                      rows="4">{{ coach.achievements if coach else '' }}</textarea>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small">Specialties</label>
+            <input type="text" name="specialties"
+                   class="form-control"
+                   value="{{ coach.specialties if coach else '' }}">
+          </div>
+
+          <button type="submit"
+                  class="btn btn-primary btn-lg rounded-pill w-100">
+            Save Profile
+          </button>
+
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+{% if coach %}
+<script>
+  document.getElementById('sendOtpBtn')?.addEventListener('click', () => {
+    fetch("{{ url_for('send_otp') }}", { method: "POST" })
+      .then(() => alert("OTP sent to your email"));
+  });
+</script>
+{% endif %}
+
+{% endblock %}

@@ -1,560 +1,223 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Changer | Premium Coaching</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Changer | Premium Coaching</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
+
 <body>
-    <nav class="navbar navbar-expand-lg sticky-top">
 
-        <div class="container">
-            <a class="navbar-brand fs-3 fw-bold serif-font" href="{{ url_for('home') }}" style="letter-spacing: -1px;">
-                GameChanger<span class="text-primary">.</span>
+<!-- ================= NAVBAR ================= -->
+<nav class="navbar navbar-expand-lg sticky-top">
+  <div class="container">
+
+    <!-- Logo -->
+    <a class="navbar-brand fs-3 fw-bold serif-font" href="{{ url_for('home') }}">
+      GameChanger<span class="text-primary">.</span>
+    </a>
+
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto align-items-center gap-lg-3">
+
+        <!-- Public -->
+        <li class="nav-item">
+          <a class="nav-link fw-medium" href="{{ url_for('coaches') }}">
+            Find a Mentor
+          </a>
+        </li>
+
+        {% if current_user.is_authenticated %}
+
+          <!-- ================= COACH DASHBOARD NAV ================= -->
+          {% if current_user.role == 'coach' %}
+          <li class="nav-item">
+            <a class="nav-link fw-medium {% if request.endpoint == 'coach_dashboard' %}active{% endif %}"
+               href="{{ url_for('coach_dashboard') }}">
+              Overview
             </a>
-            
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link fw-medium {% if request.endpoint == 'coach_bookings' %}active{% endif %}"
+               href="{{ url_for('coach_bookings') }}">
+              Bookings
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link fw-medium {% if request.endpoint == 'coach_profile' %}active{% endif %}"
+               href="{{ url_for('coach_profile') }}">
+              Profile
+            </a>
+          </li>
+          {% endif %}
 
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item"><a class="nav-link fw-medium" href="{{ url_for('coaches') }}">Find a Mentor</a></li>
-                    
-                    {% if current_user.is_authenticated %}
-                        <li class="nav-item d-flex align-items-center ms-3">
-                            
-                            <a href="{{ url_for('coach_dashboard') }}" class="me-2" title="Go to Dashboard">
-                                {% if current_user.profile_image %}
-                                    <img 
-                                        src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
-                                        class="rounded-circle shadow-sm border" 
-                                        width="40" height="40" 
-                                        style="object-fit: cover;"
-                                        alt="{{ current_user.name }}"
-                                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    <div class="gradient-avatar avatar-xs" style="display: none;">
-                                        <span class="avatar-initial">{{ current_user.name[0].upper() }}</span>
-                                    </div>
-                                {% else %}
-                                    <div class="gradient-avatar avatar-xs">
-                                        <span class="avatar-initial">{{ current_user.name[0].upper() }}</span>
-                                    </div>
-                                {% endif %}
-                            </a>
+          <!-- ================= USER DROPDOWN ================= -->
+          <li class="nav-item dropdown ms-lg-3">
+            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2"
+               href="#" data-bs-toggle="dropdown">
 
-                            <div class="dropdown">
-                                <a class="nav-link dropdown-toggle fw-bold ps-0" href="#" data-bs-toggle="dropdown">
-                                    {{ current_user.name }}
-                                    {% if current_user.role == 'coach' %}
-                                        <span class="badge bg-dark text-white rounded-pill ms-1" style="font-size: 0.6rem; vertical-align: top;">COACH</span>
-                                    {% elif current_user.is_organization %}
-                                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill ms-1" style="font-size: 0.6rem; vertical-align: top;">RECRUITER</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill ms-1" style="font-size: 0.6rem; vertical-align: top;">STUDENT</span>
-                                    {% endif %}
-                                </a>
-                                
-                                <ul class="dropdown-menu border-0 shadow-lg rounded-4 p-2">
-                                    {% if current_user.email == 'sudiksha746@gmail.com' %}
-                                        <li><a class="dropdown-item rounded-3 fw-bold text-danger" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>Admin Panel</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                    {% endif %}
-                                    
-                                    {% if current_user.role == 'coach' %}
-                                        <li><a class="dropdown-item rounded-3" href="{{ url_for('coach_dashboard') }}">Coach Dashboard</a></li>
-                                    {% elif current_user.is_organization %}
-                                        <li><a class="dropdown-item rounded-3" href="{{ url_for('coach_dashboard') }}">Recruiter Dashboard</a></li>
-                                        <li><a class="dropdown-item rounded-3 text-primary" href="{{ url_for('plans') }}">Upgrade Plan</a></li>
-                                    {% else %}
-                                        <li><a class="dropdown-item rounded-3" href="{{ url_for('coach_dashboard') }}">My Bookings</a></li>
-                                    {% endif %}
-                                    
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item rounded-3 text-danger" href="{{ url_for('logout') }}">Logout</a></li>
-                                </ul>
-                            </div>
-                        </li>
-                    {% else %}
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Log In</a></li>
-                        <li class="nav-item ms-2">
-                            <a class="btn btn-dark btn-sm px-4 rounded-pill" href="{{ url_for('register') }}">Join Now</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav>
+              {% if current_user.profile_image %}
+                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}"
+                     class="rounded-circle border shadow-sm"
+                     width="36" height="36" style="object-fit:cover;">
+              {% else %}
+                <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
+                     style="width:36px;height:36px;">
+                  {{ current_user.name[0].upper() }}
+                </div>
+              {% endif %}
 
-    <div class="container mt-3">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center">
-                        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        {% block content %}{% endblock %}
+              <span class="fw-bold">{{ current_user.name }}</span>
+            </a>
+
+            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-4 p-2">
+
+              {% if current_user.email == 'sudiksha746@gmail.com' %}
+              <li>
+                <a class="dropdown-item rounded-3 fw-bold text-danger"
+                   href="{{ url_for('admin_dashboard') }}">
+                  <i class="bi bi-speedometer2 me-2"></i> Admin Panel
+                </a>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              {% endif %}
+
+              {% if current_user.role == 'coach' %}
+              <li>
+                <a class="dropdown-item rounded-3"
+                   href="{{ url_for('coach_dashboard') }}">
+                  Coach Dashboard
+                </a>
+              </li>
+              {% endif %}
+
+              <li>
+                <a class="dropdown-item rounded-3 text-danger"
+                   href="{{ url_for('logout') }}">
+                  Logout
+                </a>
+              </li>
+            </ul>
+          </li>
+
+        {% else %}
+
+          <!-- Auth buttons -->
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('login') }}">Log In</a>
+          </li>
+          <li class="nav-item ms-2">
+            <a class="btn btn-dark btn-sm px-4 rounded-pill"
+               href="{{ url_for('register') }}">
+              Join Now
+            </a>
+          </li>
+
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- ================= FLASH + CONTENT ================= -->
+<div class="container mt-3">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} border-0 shadow-sm rounded-4 mb-4">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<!-- ================= FOOTER ================= -->
+<footer class="mt-5">
+  <div class="container py-5">
+
+    <div class="row gy-4">
+      <!-- Brand + tagline -->
+      <div class="col-md-4">
+        <h5 class="serif-font mb-2">GameChanger<span class="text-primary">.</span></h5>
+        <p class="small mb-3">
+          Structured coaching for ambitious players, parents, and academies.
+        </p>
+        <p class="small text-muted mb-1">
+          &copy; 2025 Game Changer Inc.
+        </p>
+        <p class="small text-muted mb-0">
+          Built in India for competitive sport.
+        </p>
+      </div>
+
+      <!-- Product -->
+      <div class="col-6 col-md-2">
+        <h6 class="text-uppercase small fw-bold mb-3">Product</h6>
+        <ul class="list-unstyled small mb-0">
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('coaches') }}">Find a Coach</a></li>
+          {% if current_user.is_authenticated and current_user.role == 'coach' %}
+          <li><a href="{{ url_for('coach_dashboard') }}">Coach Dashboard</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <!-- Company -->
+      <div class="col-6 col-md-3">
+        <h6 class="text-uppercase small fw-bold mb-3">Company</h6>
+        <ul class="list-unstyled small mb-0">
+          <li><a href="{{ url_for('about') }}">About</a></li>
+          <li><a href="{{ url_for('careers') }}">Careers</a></li>
+          <li><a href="{{ url_for('help_center') }}">Help Center</a></li>
+          <li><a href="{{ url_for('terms') }}">Terms &amp; Policies</a></li>
+        </ul>
+      </div>
+
+      <!-- Get started / auth -->
+      <div class="col-md-3">
+        <h6 class="text-uppercase small fw-bold mb-3">Get started</h6>
+        {% if current_user.is_authenticated %}
+          <p class="small mb-2">
+            Signed in as <strong>{{ current_user.name }}</strong>.
+          </p>
+          <a href="{{ url_for('logout') }}" class="btn btn-outline-dark btn-sm rounded-pill mb-2">
+            Log out
+          </a>
+        {% else %}
+          <a href="{{ url_for('login') }}" class="btn btn-outline-dark btn-sm rounded-pill mb-2 w-100">
+            Log In
+          </a>
+          <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm rounded-pill w-100">
+            Join as Player / Parent
+          </a>
+        {% endif %}
+      </div>
     </div>
 
-    <footer class="bg-dark py-5 mt-5">
-        <div class="container">
-            <div class="row g-4">
-                <div class="col-md-5">
-                    <h3 class="serif-font text-white mb-3">GameChanger.</h3>
-                    <p class="text-secondary small" style="max-width: 300px;">Elevate your game with world-class instruction. Trusted by athletes, backed by results.</p>
-                </div>
-                <div class="col-md-2">
-                    <h6 class="text-white mb-3">Company</h6>
-                    <ul class="list-unstyled small">
-                        <li class="mb-2"><a href="{{ url_for('about') }}" class="text-secondary text-decoration-none">About</a></li>
-                        <li class="mb-2"><a href="{{ url_for('careers') }}" class="text-secondary text-decoration-none">Careers</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-2">
-                    <h6 class="text-white mb-3">Support</h6>
-                    <ul class="list-unstyled small">
-                        <li class="mb-2"><a href="{{ url_for('help_center') }}" class="text-secondary text-decoration-none">Help Center</a></li>
-                        <li class="mb-2"><a href="{{ url_for('terms') }}" class="text-secondary text-decoration-none">Terms</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-3">
-                <h6 class="text-white mb-3">Newsletter</h6>
-                <form action="{{ url_for('subscribe') }}" method="POST" id="newsletterForm">
-                <div class="input-group">
-                    <input type="email" name="email" class="form-control border-0 rounded-start-pill" placeholder="Email" required id="newsletterEmail">
-                    <button type="submit" class="btn btn-primary rounded-end-pill" id="newsletterBtn">
-                        <span id="newsletterBtnText">Go</span>
-                    </button>
-                </div>
-                </form>
-                </div>
-            </div>
-            <hr class="opacity-25 my-4 border-secondary">
-            <div class="text-center small text-secondary opacity-50">
-                &copy; 2025 Game Changer Inc. All rights reserved.
-            </div>
-        </div>
-    </footer>
+    <hr class="mt-4 mb-3">
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-    // Creative App Loading Screen
-    (function() {
-        const loader = document.getElementById('appLoader');
-        const body = document.body;
-        
-        // Add loading class to body
-        body.classList.add('loading');
-        
-        // Simulate loading progress
-        const progressBar = document.querySelector('.progress-bar-fill');
-        let progress = 0;
-        
-        const progressInterval = setInterval(() => {
-            progress += Math.random() * 15;
-            if (progress > 100) progress = 100;
-            progressBar.style.width = progress + '%';
-            
-            if (progress >= 100) {
-                clearInterval(progressInterval);
-                
-                // Wait a bit then fade out
-                setTimeout(() => {
-                    loader.classList.add('hidden');
-                    body.classList.remove('loading');
-                    
-                    // Remove from DOM after animation
-                    setTimeout(() => {
-                        loader.style.display = 'none';
-                    }, 500);
-                }, 300);
-            }
-        }, 100);
-        
-        // Fallback: Hide loader after max 3 seconds
-        setTimeout(() => {
-            if (!loader.classList.contains('hidden')) {
-                clearInterval(progressInterval);
-                progressBar.style.width = '100%';
-                loader.classList.add('hidden');
-                body.classList.remove('loading');
-                setTimeout(() => {
-                    loader.style.display = 'none';
-                }, 500);
-            }
-        }, 3000);
-    })();
-    
-    function togglePassword(inputId, btn) {
-        const input = document.getElementById(inputId);
-        const icon = btn.querySelector('i');
-        
-        if (input.type === "password") {
-            input.type = "text";
-            icon.classList.remove("bi-eye-slash-fill");
-            icon.classList.add("bi-eye-fill");
-        } else {
-            input.type = "password";
-            icon.classList.remove("bi-eye-fill");
-            icon.classList.add("bi-eye-slash-fill");
-        }
-    }
-    
-    document.addEventListener("DOMContentLoaded", function() {
-        const newsletterForm = document.getElementById('newsletterForm');
-        const newsletterBtn = document.getElementById('newsletterBtn');
-        const newsletterBtnText = document.getElementById('newsletterBtnText');
-        
-        if (newsletterForm && newsletterBtn) {
-            newsletterForm.addEventListener('submit', function() {
-                newsletterBtn.disabled = true;
-                if (newsletterBtnText) newsletterBtnText.textContent = 'Sending...';
-            });
-        }
-    });
-    </script>
-
-    <!-- Chatbot Component -->
-    <div class="chatbot-container">
-        <div class="chatbot-window" id="chatbotWindow">
-            <div class="chatbot-header">
-                <h5><i class="bi bi-robot me-2"></i>GameChanger Assistant</h5>
-                <button class="chatbot-close" id="chatbotClose">&times;</button>
-            </div>
-            <div class="chatbot-messages" id="chatbotMessages">
-                <div class="chatbot-message bot">
-                    <div class="message-bubble message-bubble-intro">
-                    <div class="greeting-icon">
-                        <i class="bi bi-hand-thumbs-up"></i>
-                    </div>
-                    <div class="greeting-text">
-                        <strong>Hi there!</strong> I’m here to help you with:
-                    </div>
-                    <ul class="help-list">
-                        <li><i class="bi bi-person-check"></i> Choosing the right coach</li>
-                        <li><i class="bi bi-currency-rupee"></i> Pricing and packages</li>
-                        <li><i class="bi bi-calendar-check"></i> How booking works</li>
-                    </ul>
-                    <div class="help-footer">
-                        <i class="bi bi-chat-dots"></i>
-                        Ask me anything about GameChanger.
-                    </div>
-                    </div>
-                </div>
-                </div>
-            <div class="quick-questions">
-                <div class="quick-questions-title">Quick questions:</div>
-                <button class="quick-question-btn" data-question="Which coach should I choose?">Which coach should I choose?</button>
-                <button class="quick-question-btn" data-question="Pricing?">Pricing?</button>
-                <button class="quick-question-btn" data-question="How booking works?">How booking works?</button>
-                <button class="quick-question-btn" data-question="I want to get in touch">Contact Us</button>
-            </div>
-            <div class="chatbot-input-area">
-                <input type="text" class="chatbot-input" id="chatbotInput" placeholder="Type your question..." autocomplete="off">
-                <button class="chatbot-send" id="chatbotSend">
-                    <i class="bi bi-send-fill" id="chatbotSendIcon"></i>
-                </button>
-            </div>
-        </div>
-        <button class="chatbot-button" id="chatbotToggle">
-            <i class="bi bi-chat-dots-fill"></i>
-        </button>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center small">
+      <div class="text-muted mb-2 mb-md-0">
+        Need help? <a href="{{ url_for('help_center') }}">Visit Help Center</a>
+      </div>
+      <div class="d-flex gap-3">
+        <a href="{{ url_for('terms') }}" class="text-muted">Terms</a>
+        <a href="{{ url_for('help_center') }}#contact" class="text-muted">Contact</a>
+      </div>
     </div>
+  </div>
+</footer>
 
-    <script>
-    // Chatbot functionality
-    (function() {
-        const chatbotToggle = document.getElementById('chatbotToggle');
-        const chatbotWindow = document.getElementById('chatbotWindow');
-        const chatbotClose = document.getElementById('chatbotClose');
-        const chatbotMessages = document.getElementById('chatbotMessages');
-        const chatbotInput = document.getElementById('chatbotInput');
-        const chatbotSend = document.getElementById('chatbotSend');
-        const quickQuestionBtns = document.querySelectorAll('.quick-question-btn');
-        
-        // Event delegation for contact form submit buttons (fallback)
-        chatbotMessages.addEventListener('click', function(e) {
-            if (e.defaultPrevented) return;
-            
-            const submitBtn = e.target.closest('button[id^="contactSubmit_"]');
-            if (submitBtn && !submitBtn.disabled && !submitBtn.hasAttribute('data-handler-attached')) {
-                const formId = submitBtn.id.replace('contactSubmit_', '');
-                const formDiv = submitBtn.closest('.chatbot-contact-form');
-                if (formDiv) {
-                    const nameInput = formDiv.querySelector(`#contactName_${formId}`);
-                    const phoneInput = formDiv.querySelector(`#contactPhone_${formId}`);
-                    const emailInput = formDiv.querySelector(`#contactEmail_${formId}`);
-                    const needsInput = formDiv.querySelector(`#contactNeeds_${formId}`);
-                    const btnText = formDiv.querySelector(`#contactBtnText_${formId}`);
-                    
-                    if (nameInput && submitBtn) {
-                        handleContactSubmit(e, submitBtn, nameInput, phoneInput, emailInput, needsInput, btnText, formDiv);
-                    }
-                }
-            }
-        });
-        
-        // Handle contact form submission
-        async function handleContactSubmit(e, submitBtn, nameInput, phoneInput, emailInput, needsInput, btnText, formDiv) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const name = nameInput.value.trim();
-            const phone = phoneInput ? phoneInput.value.trim() : '';
-            const email = emailInput ? emailInput.value.trim() : '';
-            const needs = needsInput ? needsInput.value.trim() : '';
-            
-            if (!name) {
-                alert('Please enter your name');
-                return;
-            }
-            
-            submitBtn.disabled = true;
-            if (btnText) btnText.textContent = 'Submitting...';
-            
-            try {
-                const response = await fetch('/api/contact', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        name: name,
-                        phone: phone,
-                        email: email,
-                        needs: needs,
-                        source: 'chatbot'
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    if (btnText) btnText.textContent = '✓ Submitted!';
-                    submitBtn.style.background = '#28a745';
-                    if (nameInput) nameInput.disabled = true;
-                    if (phoneInput) phoneInput.disabled = true;
-                    if (emailInput) emailInput.disabled = true;
-                    if (needsInput) needsInput.disabled = true;
-                        addMessage('<div class="success-message"><i class="bi bi-check-circle-fill"></i> Thank you! We\'ve received your details and will get back to you soon.</div>', false);
-                } else {
-                    throw new Error(data.message || 'Submission failed');
-                }
-                } catch (error) {
-                    if (btnText) btnText.textContent = 'Try Again';
-                    submitBtn.disabled = false;
-                    alert('There was an error submitting your details. Please try again.');
-                }
-        }
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-        // Toggle chatbot window
-        chatbotToggle.addEventListener('click', () => {
-            chatbotWindow.classList.toggle('active');
-            if (chatbotWindow.classList.contains('active')) {
-                chatbotInput.focus();
-            }
-        });
-
-        chatbotClose.addEventListener('click', () => {
-            chatbotWindow.classList.remove('active');
-        });
-
-        // Add message to chat
-        function addMessage(text, isUser = false, showContactForm = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chatbot-message ${isUser ? 'user' : 'bot'}`;
-            
-            const bubble = document.createElement('div');
-            bubble.className = 'message-bubble';
-            // Convert markdown-style formatting to HTML and replace emojis with icons
-            let formattedText = text
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\n/g, '<br>')
-                .replace(/💡/g, '<i class="bi bi-lightbulb-fill" style="color: #fbbf24;"></i>')
-                .replace(/✅/g, '<i class="bi bi-check-circle-fill" style="color: #10b981;"></i>')
-                .replace(/💰/g, '<i class="bi bi-currency-dollar" style="color: #f59e0b;"></i>')
-                .replace(/🎉/g, '<i class="bi bi-balloon-fill" style="color: #ec4899;"></i>')
-                .replace(/📧/g, '<i class="bi bi-envelope-fill" style="color: #3b82f6;"></i>')
-                .replace(/📞/g, '<i class="bi bi-telephone-fill" style="color: #3b82f6;"></i>')
-                .replace(/💬/g, '<i class="bi bi-chat-dots-fill" style="color: #667eea;"></i>')
-                .replace(/★/g, '<i class="bi bi-star-fill" style="color: #fbbf24;"></i>')
-                .replace(/⭐/g, '<i class="bi bi-star-fill" style="color: #fbbf24;"></i>');
-            bubble.innerHTML = formattedText;
-            
-            messageDiv.appendChild(bubble);
-            
-            // Add contact form if needed
-            if (showContactForm) {
-                const contactForm = createContactForm();
-                messageDiv.appendChild(contactForm);
-            }
-            
-            chatbotMessages.appendChild(messageDiv);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-        }
-
-        // Create contact form
-        function createContactForm() {
-            const formDiv = document.createElement('div');
-            formDiv.className = 'chatbot-contact-form';
-            // Use unique IDs to avoid conflicts if form is created multiple times
-            const formId = 'contactForm_' + Date.now();
-            
-            // Create form elements directly instead of using innerHTML
-            const nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.id = `contactName_${formId}`;
-            nameInput.placeholder = 'Your Name *';
-            nameInput.required = true;
-            
-            const phoneInput = document.createElement('input');
-            phoneInput.type = 'tel';
-            phoneInput.id = `contactPhone_${formId}`;
-            phoneInput.placeholder = 'Phone Number';
-            
-            const emailInput = document.createElement('input');
-            emailInput.type = 'email';
-            emailInput.id = `contactEmail_${formId}`;
-            emailInput.placeholder = 'Email';
-            
-            const needsInput = document.createElement('textarea');
-            needsInput.id = `contactNeeds_${formId}`;
-            needsInput.rows = 3;
-            needsInput.placeholder = 'What are you looking for? (e.g., Cricket coach in Mumbai, Budget ₹500/session)';
-            
-            const btnText = document.createElement('span');
-            btnText.className = 'btn-text';
-            btnText.id = `contactBtnText_${formId}`;
-            btnText.textContent = 'Submit';
-            
-            const submitBtn = document.createElement('button');
-            submitBtn.type = 'button';
-            submitBtn.id = `contactSubmit_${formId}`;
-            submitBtn.className = 'btn btn-primary w-100 mt-2';
-            submitBtn.appendChild(btnText);
-            
-            // Append all elements to form
-            formDiv.appendChild(nameInput);
-            formDiv.appendChild(phoneInput);
-            formDiv.appendChild(emailInput);
-            formDiv.appendChild(needsInput);
-            formDiv.appendChild(submitBtn);
-            
-            // Handle form submission - use shared function
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                e.stopPropagation(); // Prevent event delegation from also firing
-                handleContactSubmit(e, submitBtn, nameInput, phoneInput, emailInput, needsInput, btnText, formDiv);
-            };
-            
-            // Mark button as having handler attached (prevents delegation from handling it)
-            submitBtn.setAttribute('data-handler-attached', 'true');
-            
-            btnText.style.pointerEvents = 'none';
-            
-            // Attach event listener directly to the button
-            submitBtn.addEventListener('click', handleSubmit);
-            
-            // Also use onclick as backup (works even if addEventListener fails)
-            submitBtn.onclick = handleSubmit;
-            
-            // Ensure button is clickable
-            submitBtn.style.cursor = 'pointer';
-            submitBtn.style.pointerEvents = 'auto';
-            
-            return formDiv;
-        }
-
-        function showLoadingMessage() {
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'chatbot-message bot';
-            loadingDiv.id = 'chatbotLoading';
-            loadingDiv.innerHTML = '<div class="message-bubble">Thinking...</div>';
-            chatbotMessages.appendChild(loadingDiv);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-            return loadingDiv;
-        }
-
-        // Remove loading message
-        function removeLoadingMessage() {
-            const loading = document.getElementById('chatbotLoading');
-            if (loading) {
-                loading.remove();
-            }
-        }
-
-        // Send message
-        async function sendMessage(query) {
-            if (!query.trim()) return;
-
-            addMessage(query, true);
-            chatbotInput.value = '';
-            chatbotSend.disabled = true;
-            
-            // Show loading message
-            const loadingMsg = showLoadingMessage();
-
-            try {
-                const response = await fetch('/api/chatbot', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ query: query })
-                });
-
-                const data = await response.json();
-                removeLoadingMessage();
-                addMessage(data.response || 'Sorry, I couldn\'t process that. Please try again.', false, data.show_contact_form);
-            } catch (error) {
-                removeLoadingMessage();
-                addMessage('Sorry, there was an error. Please try again later.');
-            } finally {
-                chatbotSend.disabled = false;
-                chatbotInput.focus();
-            }
-        }
-
-        // Send button click
-        chatbotSend.addEventListener('click', () => {
-            const query = chatbotInput.value.trim();
-            if (query) {
-                sendMessage(query);
-            }
-        });
-
-        // Enter key press
-        chatbotInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const query = chatbotInput.value.trim();
-                if (query) {
-                    sendMessage(query);
-                }
-            }
-        });
-
-        // Quick question buttons
-        quickQuestionBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const question = btn.getAttribute('data-question');
-                sendMessage(question);
-            });
-        });
-    })();
-    </script>
 </body>
 </html>
