@@ -1472,3 +1472,67 @@ footer small {
     height: 64px;
   }
 }
+/* ========== MOBILE TWEAKS – HOMEPAGE & DASHBOARD ========== */
+
+/* 1) Testimonials: less cluttered on mobile */
+@media (max-width: 576px) {
+  .gc-twave-shell {
+    border-radius: 24px;
+  }
+
+  .gc-twave-inner {
+    padding: 18px 16px 20px;
+  }
+
+  .gc-twave-avatars {
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+
+  .gc-twave-quote {
+    margin-top: 4px;
+  }
+
+  .gc-twave-avatar-ring {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+/* 2) Hero spacing: avoid random big gap on very small screens */
+@media (max-width: 576px) {
+  .hero-section-supermi {
+    padding-top: 56px;
+    padding-bottom: 48px;
+  }
+
+  .hero-section-supermi .container {
+    margin-top: 0;
+  }
+}
+
+/* 3) Coach detail header alignment on mobile */
+@media (max-width: 576px) {
+  /* Center avatar + verified pill */
+  .coach-detail-page .row.g-4.mb-4.align-items-center > .col-md-3 {
+    text-align: center !important;
+    margin-bottom: 0.75rem;
+  }
+
+  .coach-detail-avatar {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .coach-detail-page .d-inline-flex.align-items-center.gap-1 {
+    margin-top: 4px;
+  }
+}
+
+/* 4) Dashboard header pills (Availability) centering on mobile */
+@media (max-width: 576px) {
+  .dashboard-header-pills {
+    justify-content: center !important;
+    text-align: center;
+  }
+}
