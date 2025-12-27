@@ -344,26 +344,27 @@
                   {% endfor %}
                 </select>
               </div>
-
+              <!-- DATE -->
               <div class="mb-3">
-                <label class="form-label small text-muted">Date</label>
-                <input type="date" name="date"
-                       class="form-control form-control-sm border-0"
-                       required id="bookingDateInput">
+                <label class="form-label small text-muted">Select Date</label>
+                <input type="text"
+                      id="slot-date"
+                      name="date"
+                      class="form-control form-control-sm"
+                      placeholder="Select date"
+                      readonly required>
               </div>
 
+              <!-- SLOTS -->
               <div class="mb-3">
-                <label class="form-label small text-muted">Preferred Time</label>
-                <select name="time" class="form-select form-select-sm" required>
-                  <option value="">Select time slot</option>
-                  <option value="06:00">06:00 AM</option>
-                  <option value="07:00">07:00 AM</option>
-                  <option value="08:00">08:00 AM</option>
-                  <option value="16:00">04:00 PM</option>
-                  <option value="17:00">05:00 PM</option>
-                  <option value="18:00">06:00 PM</option>
-                </select>
+                <label class="form-label small text-muted">Available Time Slots</label>
+                <div id="slots-container" class="d-flex flex-wrap gap-2">
+                  <span class="text-muted small">Select a date to view slots</span>
+                </div>
               </div>
+
+              <input type="hidden" name="time" id="selected-time">
+
 
               <div class="mb-3">
                 <label class="form-label small text-muted">Venue</label>
@@ -491,11 +492,57 @@
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     // Prevent past dates
-    const dateInput = document.getElementById('bookingDateInput');
-    if (dateInput) {
-      const today = new Date().toISOString().split('T')[0];
-      dateInput.min = today;
-    }
+    // Calendar + slot loading
+      const slotsContainer = document.getElementById("slots-container");
+      const selectedTimeInput = document.getElementById("selected-time");
+      const coachId = {{ coach.id }};
+
+      flatpickr("#slot-date", {
+        inline: true,
+        minDate: "today",
+        dateFormat: "Y-m-d",
+
+        onChange: async function(selectedDates, dateStr) {
+          slotsContainer.innerHTML =
+            "<span class='text-muted small'>Loading slots…</span>";
+          selectedTimeInput.value = "";
+
+          try {
+            const res = await fetch(`/api/coach/${coachId}/slots?date=${dateStr}`);
+            const data = await res.json();
+
+            slotsContainer.innerHTML = "";
+
+            if (!data.slots || data.slots.length === 0) {
+              slotsContainer.innerHTML =
+                "<span class='text-muted small'>No slots available</span>";
+              return;
+            }
+
+            data.slots.forEach(slot => {
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "btn btn-outline-primary btn-sm";
+              btn.textContent = slot;
+
+              btn.onclick = () => {
+                document.querySelectorAll("#slots-container button")
+                  .forEach(b => b.classList.remove("active"));
+
+                btn.classList.add("active");
+                selectedTimeInput.value = slot;
+              };
+
+              slotsContainer.appendChild(btn);
+            });
+
+          } catch (e) {
+            slotsContainer.innerHTML =
+              "<span class='text-danger small'>Error loading slots</span>";
+          }
+        }
+      });
+
 
     // Booking button loading state
     const bookingForm = document.getElementById('bookingForm');
