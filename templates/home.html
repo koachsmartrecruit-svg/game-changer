@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 <!-- ================= HERO ================= -->
-<section class="hero-section-supermi gc-wave-divider">
+<section class="hero-section-supermi">
+
   <div class="hero-gradient-bg">
     <div class="container">
-      <div class="row align-items-center gy-5">
+      <div class="row align-items-start gy-5">
 
         <!-- LEFT CONTENT -->
         <div class="col-lg-6">
@@ -71,97 +72,84 @@
     </div>
   </div>
 </section>
+<!-- ================= TESTIMONIALS (SPLIT EDITORIAL) ================= -->
+<section class="gc-testimonial-split">
+  <div class="container">
 
-<!-- ================= TESTIMONIALS ================= -->
-<section class="gc-section gc-section-soft gc-section-divider">
-<div class="gc-twave-shell card gc-card border-0">
-  <div class="gc-twave-inner p-5">
-
-    <div class="text-center mb-3">
-      <span class="badge bg-dark bg-opacity-10 rounded-pill mb-3">
-        Testimonials
-      </span>
-      <h2 class="fw-bold mb-2">What Our Athletes Say</h2>
-      <p class="text-muted">
-        Real stories from competitive players.
-      </p>
+    <div class="testimonial-header">
+      <span class="testimonial-eyebrow">Athlete Stories</span>
+      <h2>Real impact on match performance</h2>
+      <p>How structured coaching changes results on the field.</p>
     </div>
 
-    {% set t_items = [
-      {
-        "name": "Arjun Mehta",
-        "sport": "Cricket – Fast Bowler",
-        "quote": "The sessions improved my rhythm and pace. Match performance became more consistent.",
-        "image": "arjun.jpg"
-      },
-      {
-        "name": "Sara Nair",
-        "sport": "Badminton – Singles",
-        "quote": "Footwork and stamina training helped me dominate longer rallies.",
-        "image": "sara.jpg"
-      },
-      {
-        "name": "Kabir Rao",
-        "sport": "Football – Midfielder",
-        "quote": "Better positioning and decision making across 90 minutes.",
-        "image": "kabir.jpg"
-      }
-    ] %}
+    <!-- TESTIMONIAL 1 -->
+    <div class="row align-items-center gy-5 mb-5">
 
-    <!-- AVATARS -->
-    <div class="d-flex justify-content-center gap-4 mb-4 overflow-auto">
-      {% for t in t_items %}
-      <button
-        class="gc-twave-avatar-btn {% if loop.first %}active{% endif %}"
-        data-name="{{ t.name }}"
-        data-sport="{{ t.sport }}"
-        data-quote="{{ t.quote }}"
-        data-image="{{ t.image }}"
-        type="button"
-      >
-        <div class="gc-twave-avatar-ring">
-          <img
-            src="{{ url_for('static', filename='images/testimonials/' ~ t.image) }}"
-            class="gc-twave-avatar-img"
-            alt="{{ t.name }}">
+      <!-- LEFT : TEXT -->
+      <div class="col-lg-6">
+        <blockquote class="testimonial-quote">
+          “Better positioning and decision making across 90 minutes
+          completely changed my match impact.”
+        </blockquote>
+
+        <div class="testimonial-author">
+          <strong>Kabir Rao</strong>
+          <span>Football • Midfielder</span>
         </div>
-      </button>
-      {% endfor %}
+      </div>
+
+      <!-- RIGHT : IMAGE -->
+              <!-- RIGHT : IMAGE -->
+        <div class="col-lg-6">
+          <div class="testimonial-image">
+            <img
+              src="{{ url_for('static', filename='images/testimonials/arjun.jpg') }}"
+              alt="Athlete training session">
+          </div>
+        </div>
     </div>
 
-    <!-- QUOTE -->
-    <div class="gc-twave-quote text-center mx-auto gc-twave-quote-box">
+    <!-- TESTIMONIAL 2 -->
+    <div class="row align-items-center gy-5 flex-lg-row-reverse">
 
-      <p class="lead mb-3">“{{ t_items[0].quote }}”</p>
-      <div class="fw-semibold">{{ t_items[0].name }}</div>
-      <div class="small text-muted">{{ t_items[0].sport }}</div>
-    </div>
+      <!-- LEFT : TEXT -->
+      <div class="col-lg-6">
+        <blockquote class="testimonial-quote">
+          “Footwork drills and stamina conditioning helped me dominate
+          longer rallies and stay composed under pressure.”
+        </blockquote>
 
-    <!-- NAV -->
-    <div class="d-flex justify-content-center gap-3 mt-4">
-      <button id="gc-twave-prev" class="btn btn-outline-secondary rounded-circle">
-        <i class="bi bi-chevron-left"></i>
-      </button>
-      <button id="gc-twave-next" class="btn btn-outline-secondary rounded-circle">
-        <i class="bi bi-chevron-right"></i>
-      </button>
+        <div class="testimonial-author">
+          <strong>Sara Nair</strong>
+          <span>Badminton • Singles</span>
+        </div>
+      </div>
+
+      <!-- RIGHT : IMAGE -->
+        <div class="col-lg-6">
+          <div class="testimonial-image">
+            <img
+              src="{{ url_for('static', filename='images/testimonials/sara.jpg') }}"
+              alt="Athlete training session">
+          </div>
+        </div>
+
     </div>
 
   </div>
-</div>
 </section>
 
 <!-- ================= FEATURED COACHES ================= -->
 <section class="gc-section">
   <div class="container">
 
-    <div class="d-flex justify-content-between align-items-end mb-3">
+    <div class="d-flex justify-content-between align-items-end mb-4">
       <div>
         <span class="badge bg-dark bg-opacity-10 rounded-pill mb-2">
           Top Rated
         </span>
         <h2 class="fw-bold mb-0">Featured Coaches</h2>
-        <p class="text-muted mt-2">Trusted by competitive athletes</p>
+        <p class="text-muted mt-1">Trusted by competitive athletes</p>
       </div>
 
       <a href="{{ url_for('coaches') }}" class="gc-btn-outline">
@@ -170,14 +158,16 @@
     </div>
 
     {% if coaches %}
-    <div class="row g-4">
+    <div class="row g-3">
       {% for coach in coaches %}
       <div class="col-md-4">
         <a href="{{ url_for('coach_detail', slug=coach.slug) }}"
            class="coach-card-link text-decoration-none">
-          <div class="coach-highlight-card gc-card h-100">
-            <h4 class="fw-bold mb-1">{{ coach.name }}</h4>
-            <p class="text-muted small mb-3">{{ coach.tagline }}</p>
+          <div class="coach-highlight-card gc-card h-100 d-flex flex-column">
+            <h4 class="fw-bold coach-name">{{ coach.name }}</h4>
+            <p class="text-muted small coach-desc">
+              {{ coach.tagline }}
+            </p>
             <strong class="coach-highlight-price">
               ₹{{ coach.price_per_session }} / session
             </strong>
@@ -191,98 +181,6 @@
   </div>
 </section>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-
-  /* ================= TESTIMONIALS CAROUSEL ================= */
-
-  const avatarButtons = Array.from(document.querySelectorAll(".gc-twave-avatar-btn"));
-  const quoteBox = document.querySelector(".gc-twave-quote");
-  const mobileCard = document.querySelector(".gc-twave-mobile-card");
-
-  const prevBtn = document.getElementById("gc-twave-prev");
-  const nextBtn = document.getElementById("gc-twave-next");
-  const prevBtnM = document.getElementById("gc-twave-prev-m");
-  const nextBtnM = document.getElementById("gc-twave-next-m");
-
-  let currentIndex = avatarButtons.findIndex(b => b.classList.contains("active"));
-  if (currentIndex === -1) currentIndex = 0;
-
-  let testimonialInterval = null;
-
-  function renderTestimonial(index) {
-    const btn = avatarButtons[index];
-    if (!btn) return;
-
-    avatarButtons.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    const { name, sport, quote, image } = btn.dataset;
-
-    if (quoteBox) {
-      quoteBox.innerHTML = `
-        <p class="lead mb-3">“${quote}”</p>
-        <div class="fw-semibold">${name}</div>
-        <div class="small text-muted">${sport}</div>
-      `;
-    }
-
-    if (mobileCard) {
-      const img = mobileCard.querySelector(".gc-twave-mobile-img");
-      const nameEl = mobileCard.querySelector(".gc-twave-mobile-name");
-      const sportEl = mobileCard.querySelector(".gc-twave-mobile-sport");
-      const quoteEl = mobileCard.querySelector(".gc-twave-mobile-quote");
-
-      if (img) {
-        img.src = "{{ url_for('static', filename='images/testimonials/') }}" + image;
-        img.alt = name;
-      }
-      if (nameEl) nameEl.textContent = name;
-      if (sportEl) sportEl.textContent = sport;
-      if (quoteEl) quoteEl.textContent = "“" + quote + "”";
-    }
-    currentIndex = index;
-  }
-
-  function nextTestimonial() {
-    renderTestimonial((currentIndex + 1) % avatarButtons.length);
-  }
-
-  function prevTestimonial() {
-    renderTestimonial((currentIndex - 1 + avatarButtons.length) % avatarButtons.length);
-  }
-
-  function startTestimonials() {
-    stopTestimonials();
-    testimonialInterval = setInterval(nextTestimonial, 4000);
-  }
-
-  function stopTestimonials() {
-    if (testimonialInterval) clearInterval(testimonialInterval);
-  }
-
-  avatarButtons.forEach((btn, index) => {
-    btn.addEventListener("click", () => {
-      renderTestimonial(index);
-      startTestimonials();
-    });
-  });
-
-  if (prevBtn) prevBtn.addEventListener("click", () => { prevTestimonial(); startTestimonials(); });
-  if (nextBtn) nextBtn.addEventListener("click", () => { nextTestimonial(); startTestimonials(); });
-  if (prevBtnM) prevBtnM.addEventListener("click", () => { prevTestimonial(); startTestimonials(); });
-  if (nextBtnM) nextBtnM.addEventListener("click", () => { nextTestimonial(); startTestimonials(); });
-
-  const testimonialSection = document.querySelector(".gc-twave-shell");
-  if (testimonialSection) {
-    testimonialSection.addEventListener("mouseenter", stopTestimonials);
-    testimonialSection.addEventListener("mouseleave", startTestimonials);
-  }
-
-  if (avatarButtons.length) {
-    renderTestimonial(currentIndex);
-    startTestimonials();
-  }
-
   /* ================= HERO STATS COUNTER ================= */
 
   const counters = document.querySelectorAll(".hero-stat-number");
