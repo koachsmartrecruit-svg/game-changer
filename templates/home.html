@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-
 <!-- ================= HERO ================= -->
 <section class="hero-section-supermi gc-wave-divider">
   <div class="hero-gradient-bg">
     <div class="container">
-      <div class="row align-items-center gy-4">
+      <div class="row align-items-center gy-5">
 
+        <!-- LEFT CONTENT -->
         <div class="col-lg-6">
           <div class="hero-nav-pill mb-3">
             <span class="badge-supermi">PRO-LEVEL SPORTS COACHING</span>
@@ -18,94 +18,32 @@
           </h1>
 
           <p class="hero-subheadline mb-4 opacity-75">
-            Match with verified coaches, track your progress, and level up your game with data-driven training.
+            Match with verified coaches, track your progress, and level up your
+            game with data-driven training.
           </p>
 
-          <div class="d-flex flex-column">
-            <div class="d-flex flex-wrap gap-3 mb-2">
-              <a href="{{ url_for('coaches') }}" class="gc-btn-primary">
-                Find a Coach
-              </a>
-              <a href="#how-it-works" class="gc-btn-outline">
-                See How It Works
-              </a>
+          <div class="hero-cta-stack">
+            <a href="{{ url_for('coaches') }}"
+               class="gc-btn-primary hero-primary-cta">
+              Find Your Coach
+            </a>
+
+            <div class="hero-trust-line mt-2">
+              Trusted by competitive athletes across sports
             </div>
-            <small class="text-muted hero-cta-subcopy">
-              No commitment. Browse coaches first.
-            </small>
-          </div>
-        <div class="hero-stats-bar mt-4">
-
-          <div class="hero-stat">
-            <div class="hero-stat-number" data-count="50" data-suffix="+">0</div>
-            <div class="hero-stat-label">Verified Coaches</div>
-          </div>
-
-          <div class="hero-stat">
-            <div class="hero-stat-number" data-count="100" data-suffix="+">0</div>
-            <div class="hero-stat-label">Athletes Trained</div>
-          </div>
-
-          <div class="hero-stat">
-            <div class="hero-stat-number" data-count="4.9" data-suffix="">0</div>
-            <div class="hero-stat-label">Avg. Coach Rating</div>
-          </div>
-
-        </div>
-
-        <div class="col-lg-6">
-          <div class="hero-orb-shell">
-            <div class="hero-orb-glow"></div>
-            <div class="hero-orb-base-shadow"></div>
-
-            <img src="{{ url_for('static', filename='images/hero-orb.png') }}"
-                 class="hero-orb-img"
-                 alt="Training visual">
-
-            <img src="{{ url_for('static', filename='images/hero-orb.png') }}"
-                 class="hero-orb-img hero-orb-img-small"
-                 alt="Training visual">
           </div>
         </div>
 
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ================= HOW IT WORKS ================= -->
-<section id="how-it-works" class="gc-section gc-section-soft gc-section-divider gc-section-overlap">
-  <div class="container">
-
-    <div class="text-center mb-5">
-      <span class="badge bg-dark bg-opacity-10 text-dark px-3 py-2 rounded-pill mb-3">
-        Simple Process
-      </span>
-      <h2 class="fw-bold mb-3">How It Works</h2>
-      <p class="text-muted lead mx-auto" style="max-width: 600px;">
-        Go from search to game-ready in three steps.
-      </p>
-    </div>
-
-    <div class="row g-4">
-      {% for step in [
-        ('01','bi-search','Discover Your Coach','Filter by sport, city, budget and rating.'),
-        ('02','bi-calendar-check','Choose Your Plan','Pick sessions that fit your season.'),
-        ('03','bi-trophy','Train & Win','Turn sessions into results.')
-      ] %}
-      <div class="col-md-4">
-        <div class="modern-card gc-card h-100 position-relative">
-          <div class="step-pill">STEP {{ step[0] }}</div>
-          <div class="icon-shell mb-4">
-            <i class="bi {{ step[1] }} fs-3"></i>
-          </div>
-          <h4 class="fw-bold mb-3">{{ step[2] }}</h4>
-          <p class="text-muted">{{ step[3] }}</p>
+        <!-- RIGHT IMAGE -->
+        <div class="col-lg-6 hero-image-wrap">
+          <img
+            src="{{ url_for('static', filename='images/hero-athlete.jpeg') }}"
+            alt="Coach guiding athlete"
+            class="hero-main-image"
+          >
         </div>
       </div>
-      {% endfor %}
     </div>
-
   </div>
 </section>
 
@@ -139,7 +77,7 @@
 <div class="gc-twave-shell card gc-card border-0">
   <div class="gc-twave-inner p-5">
 
-    <div class="text-center mb-5">
+    <div class="text-center mb-3">
       <span class="badge bg-dark bg-opacity-10 rounded-pill mb-3">
         Testimonials
       </span>
@@ -217,7 +155,7 @@
 <section class="gc-section">
   <div class="container">
 
-    <div class="d-flex justify-content-between align-items-end mb-5">
+    <div class="d-flex justify-content-between align-items-end mb-3">
       <div>
         <span class="badge bg-dark bg-opacity-10 rounded-pill mb-2">
           Top Rated
@@ -302,8 +240,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (sportEl) sportEl.textContent = sport;
       if (quoteEl) quoteEl.textContent = "“" + quote + "”";
     }
-
-    btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
     currentIndex = index;
   }
 
