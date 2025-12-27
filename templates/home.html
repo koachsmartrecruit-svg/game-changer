@@ -34,21 +34,23 @@
               No commitment. Browse coaches first.
             </small>
           </div>
+        <div class="hero-stats-bar mt-4">
 
-          <div class="hero-stats-bar mt-4">
-            <div class="hero-stat">
-              <div class="hero-stat-number">50+</div>
-              <div class="hero-stat-label">Verified Coaches</div>
-            </div>
-            <div class="hero-stat">
-              <div class="hero-stat-number">100+</div>
-              <div class="hero-stat-label">Athletes Trained</div>
-            </div>
-            <div class="hero-stat">
-              <div class="hero-stat-number">4.9</div>
-              <div class="hero-stat-label">Avg. Coach Rating</div>
-            </div>
+          <div class="hero-stat">
+            <div class="hero-stat-number" data-count="50" data-suffix="+">0</div>
+            <div class="hero-stat-label">Verified Coaches</div>
           </div>
+
+          <div class="hero-stat">
+            <div class="hero-stat-number" data-count="100" data-suffix="+">0</div>
+            <div class="hero-stat-label">Athletes Trained</div>
+          </div>
+
+          <div class="hero-stat">
+            <div class="hero-stat-number" data-count="4.9" data-suffix="">0</div>
+            <div class="hero-stat-label">Avg. Coach Rating</div>
+          </div>
+
         </div>
 
         <div class="col-lg-6">
@@ -134,20 +136,81 @@
 
 <!-- ================= TESTIMONIALS ================= -->
 <section class="gc-section gc-section-soft gc-section-divider">
-  <div class="container">
-    <div class="gc-twave-shell card gc-card border-0">
-      <div class="gc-twave-inner p-5 text-center">
-        <span class="badge bg-dark bg-opacity-10 rounded-pill mb-3">Testimonials</span>
-        <h2 class="fw-bold mb-3">What Our Athletes Say</h2>
-        <p class="text-muted mb-4">
-          Real stories from competitive players.
-        </p>
-        <a href="{{ url_for('coaches') }}" class="gc-btn-primary">
-          Book a Coach
-        </a>
-      </div>
+<div class="gc-twave-shell card gc-card border-0">
+  <div class="gc-twave-inner p-5">
+
+    <div class="text-center mb-5">
+      <span class="badge bg-dark bg-opacity-10 rounded-pill mb-3">
+        Testimonials
+      </span>
+      <h2 class="fw-bold mb-2">What Our Athletes Say</h2>
+      <p class="text-muted">
+        Real stories from competitive players.
+      </p>
     </div>
+
+    {% set t_items = [
+      {
+        "name": "Arjun Mehta",
+        "sport": "Cricket – Fast Bowler",
+        "quote": "The sessions improved my rhythm and pace. Match performance became more consistent.",
+        "image": "arjun.jpg"
+      },
+      {
+        "name": "Sara Nair",
+        "sport": "Badminton – Singles",
+        "quote": "Footwork and stamina training helped me dominate longer rallies.",
+        "image": "sara.jpg"
+      },
+      {
+        "name": "Kabir Rao",
+        "sport": "Football – Midfielder",
+        "quote": "Better positioning and decision making across 90 minutes.",
+        "image": "kabir.jpg"
+      }
+    ] %}
+
+    <!-- AVATARS -->
+    <div class="d-flex justify-content-center gap-4 mb-4 overflow-auto">
+      {% for t in t_items %}
+      <button
+        class="gc-twave-avatar-btn {% if loop.first %}active{% endif %}"
+        data-name="{{ t.name }}"
+        data-sport="{{ t.sport }}"
+        data-quote="{{ t.quote }}"
+        data-image="{{ t.image }}"
+        type="button"
+      >
+        <div class="gc-twave-avatar-ring">
+          <img
+            src="{{ url_for('static', filename='images/testimonials/' ~ t.image) }}"
+            class="gc-twave-avatar-img"
+            alt="{{ t.name }}">
+        </div>
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- QUOTE -->
+    <div class="gc-twave-quote text-center mx-auto gc-twave-quote-box">
+
+      <p class="lead mb-3">“{{ t_items[0].quote }}”</p>
+      <div class="fw-semibold">{{ t_items[0].name }}</div>
+      <div class="small text-muted">{{ t_items[0].sport }}</div>
+    </div>
+
+    <!-- NAV -->
+    <div class="d-flex justify-content-center gap-3 mt-4">
+      <button id="gc-twave-prev" class="btn btn-outline-secondary rounded-circle">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <button id="gc-twave-next" class="btn btn-outline-secondary rounded-circle">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+
   </div>
+</div>
 </section>
 
 <!-- ================= FEATURED COACHES ================= -->
@@ -189,5 +252,155 @@
 
   </div>
 </section>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  /* ================= TESTIMONIALS CAROUSEL ================= */
+
+  const avatarButtons = Array.from(document.querySelectorAll(".gc-twave-avatar-btn"));
+  const quoteBox = document.querySelector(".gc-twave-quote");
+  const mobileCard = document.querySelector(".gc-twave-mobile-card");
+
+  const prevBtn = document.getElementById("gc-twave-prev");
+  const nextBtn = document.getElementById("gc-twave-next");
+  const prevBtnM = document.getElementById("gc-twave-prev-m");
+  const nextBtnM = document.getElementById("gc-twave-next-m");
+
+  let currentIndex = avatarButtons.findIndex(b => b.classList.contains("active"));
+  if (currentIndex === -1) currentIndex = 0;
+
+  let testimonialInterval = null;
+
+  function renderTestimonial(index) {
+    const btn = avatarButtons[index];
+    if (!btn) return;
+
+    avatarButtons.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    const { name, sport, quote, image } = btn.dataset;
+
+    if (quoteBox) {
+      quoteBox.innerHTML = `
+        <p class="lead mb-3">“${quote}”</p>
+        <div class="fw-semibold">${name}</div>
+        <div class="small text-muted">${sport}</div>
+      `;
+    }
+
+    if (mobileCard) {
+      const img = mobileCard.querySelector(".gc-twave-mobile-img");
+      const nameEl = mobileCard.querySelector(".gc-twave-mobile-name");
+      const sportEl = mobileCard.querySelector(".gc-twave-mobile-sport");
+      const quoteEl = mobileCard.querySelector(".gc-twave-mobile-quote");
+
+      if (img) {
+        img.src = "{{ url_for('static', filename='images/testimonials/') }}" + image;
+        img.alt = name;
+      }
+      if (nameEl) nameEl.textContent = name;
+      if (sportEl) sportEl.textContent = sport;
+      if (quoteEl) quoteEl.textContent = "“" + quote + "”";
+    }
+
+    btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    currentIndex = index;
+  }
+
+  function nextTestimonial() {
+    renderTestimonial((currentIndex + 1) % avatarButtons.length);
+  }
+
+  function prevTestimonial() {
+    renderTestimonial((currentIndex - 1 + avatarButtons.length) % avatarButtons.length);
+  }
+
+  function startTestimonials() {
+    stopTestimonials();
+    testimonialInterval = setInterval(nextTestimonial, 4000);
+  }
+
+  function stopTestimonials() {
+    if (testimonialInterval) clearInterval(testimonialInterval);
+  }
+
+  avatarButtons.forEach((btn, index) => {
+    btn.addEventListener("click", () => {
+      renderTestimonial(index);
+      startTestimonials();
+    });
+  });
+
+  if (prevBtn) prevBtn.addEventListener("click", () => { prevTestimonial(); startTestimonials(); });
+  if (nextBtn) nextBtn.addEventListener("click", () => { nextTestimonial(); startTestimonials(); });
+  if (prevBtnM) prevBtnM.addEventListener("click", () => { prevTestimonial(); startTestimonials(); });
+  if (nextBtnM) nextBtnM.addEventListener("click", () => { nextTestimonial(); startTestimonials(); });
+
+  const testimonialSection = document.querySelector(".gc-twave-shell");
+  if (testimonialSection) {
+    testimonialSection.addEventListener("mouseenter", stopTestimonials);
+    testimonialSection.addEventListener("mouseleave", startTestimonials);
+  }
+
+  if (avatarButtons.length) {
+    renderTestimonial(currentIndex);
+    startTestimonials();
+  }
+
+  /* ================= HERO STATS COUNTER ================= */
+
+  const counters = document.querySelectorAll(".hero-stat-number");
+  let statsAnimated = false;
+
+  function animateStats() {
+    if (statsAnimated) return;
+    statsAnimated = true;
+
+    counters.forEach(counter => {
+      const target = parseFloat(counter.dataset.count);
+      const suffix = counter.dataset.suffix || "";
+      const isDecimal = target % 1 !== 0;
+
+      let current = 0;
+      const duration = 1400;
+      const startTime = performance.now();
+
+      function update(now) {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+
+        current = eased * target;
+
+        counter.textContent = isDecimal
+          ? current.toFixed(1) + suffix
+          : Math.floor(current) + suffix;
+
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          counter.textContent = target + suffix;
+        }
+      }
+
+      requestAnimationFrame(update);
+    });
+  }
+
+  const statsBar = document.querySelector(".hero-stats-bar");
+  if (statsBar) {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          animateStats();
+          observer.disconnect();
+        }
+      });
+    }, { threshold: 0.4 });
+
+    observer.observe(statsBar);
+  }
+
+});
+</script>
 
 {% endblock %}

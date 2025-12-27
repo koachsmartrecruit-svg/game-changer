@@ -1885,3 +1885,147 @@ i.bi {
   width: 60%;
   left: 20%;
 }
+/* ================= TESTIMONIAL CAROUSEL POLISH ================= */
+
+/* Active avatar emphasis */
+.gc-twave-avatar-btn.active .gc-twave-avatar-ring {
+  transform: translateY(-12px) scale(1.08);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.28);
+}
+
+/* Quote fade-in */
+.gc-twave-quote {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.gc-twave-quote p {
+  transition: opacity 0.35s ease;
+}
+
+/* Mobile card transition */
+.gc-twave-mobile-card {
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+/* ================= RESPONSIVE FIXES ================= */
+
+@media (max-width: 991px) {
+
+  /* HERO */
+  .hero-headline-supermi {
+    font-size: 2.4rem;
+    line-height: 1.15;
+  }
+
+  .hero-subheadline {
+    font-size: 1rem;
+  }
+
+  .hero-orb-shell {
+    transform: scale(0.85);
+    margin-top: 32px;
+  }
+
+  /* BUTTONS */
+  .gc-btn-primary,
+  .gc-btn-outline {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* STATS */
+  .hero-stats-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .hero-stat {
+    flex: 1 1 calc(50% - 12px);
+    text-align: center;
+    padding: 14px 12px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(8px);
+  }
+
+  .hero-stat-number {
+    font-size: 1.4rem;
+  }
+
+  .hero-stat-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* EXTRA SMALL PHONES */
+@media (max-width: 575px) {
+
+  .hero-headline-supermi {
+    font-size: 2rem;
+  }
+
+  .hero-nav-pill {
+    margin-bottom: 12px;
+  }
+
+  .hero-stats-bar {
+    gap: 10px;
+  }
+
+  .hero-stat {
+    flex: 1 1 100%;
+  }
+
+  /* TESTIMONIAL AVATARS SCROLL */
+  .gc-twave-avatar-btn {
+    flex-shrink: 0;
+  }
+
+  .gc-twave-inner {
+    padding: 32px 20px;
+  }
+}
+/* ================= TESTIMONIAL VISUAL BALANCE ================= */
+
+/* Limit width so content doesn’t feel lost */
+.gc-twave-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* Quote container */
+.gc-twave-quote-box {
+  margin-top: 32px;
+  padding: 28px 32px;
+  max-width: 720px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+}
+
+/* Quote text */
+.gc-twave-quote-box p {
+  font-size: 1.15rem;
+}
+
+/* Name emphasis */
+.gc-twave-quote-box .fw-semibold {
+  margin-top: 12px;
+}
+
+/* Nav closer to content */
+.gc-twave-inner .btn-outline-secondary {
+  margin-top: 8px;
+}
+
+/* Mobile tweaks */
+@media (max-width: 768px) {
+  .gc-twave-quote-box {
+    padding: 22px 20px;
+  }
+
+  .gc-twave-quote-box p {
+    font-size: 1rem;
+  }
+}
