@@ -1,9 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="container my-5">
-  <h2 class="mb-1">Availability Manager</h2>
-  <p class="text-muted">Set your weekly availability (30-minute slots)</p>
+<div class="container py-4 py-lg-5">
+
+  <!-- ================= HEADER ================= -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h2 serif-font mb-0">Availability Manager</h1>
+      <p class="text-muted mb-0">Set your weekly training schedule</p>
+    </div>
+  </div>
+
 
   <form method="POST" action="{{ url_for('update_availability') }}">
 
@@ -11,97 +18,156 @@
       ('Monday',0),('Tuesday',1),('Wednesday',2),
       ('Thursday',3),('Friday',4),('Saturday',5),('Sunday',6)
     ] %}
+
+
+    <!-- ================= TOP ACTION ================= -->
     <div class="mb-3">
       <button type="button"
-              class="btn btn-sm btn-outline-secondary"
+              class="btn btn-outline-dark btn-sm rounded-pill"
               onclick="copyMondayToAll()">
-        Copy Monday to All Days
+        Copy Monday to all active days
       </button>
     </div>
-    <div class="card shadow-sm rounded-4 overflow-hidden">
-      <div class="card-header bg-dark text-white">
-        Weekly Availability
+
+
+
+    <!-- ================= CARD ================= -->
+    <div class="card gc-card rounded-4 overflow-hidden">
+
+      <div class="card-header dashboard-card-header-dark border-0">
+        <h5 class="fw-bold mb-0">Weekly Availability</h5>
+        <small class="text-muted">Slots are auto-divided into 30 min windows</small>
       </div>
 
-      <div class="list-group list-group-flush">
-        {% for day, idx in days %}
-        <div class="list-group-item py-4">
-          <div class="row align-items-center">
 
-            <!-- Day Toggle -->
+
+      <!-- ================= DAY ROWS ================= -->
+      <div class="list-group list-group-flush">
+
+        {% for day, idx in days %}
+        <div class="list-group-item border-0 py-4 dashboard-list-item">
+
+          <div class="row align-items-center gy-2">
+
+
+            <!-- DAY TOGGLE -->
             <div class="col-md-3">
-              <label class="fw-bold">
+              <div class="d-flex align-items-center gap-2">
                 <input type="checkbox"
                        name="day_{{ day }}_active"
+                       class="form-check-input"
                        {% if weekly.get(idx) %}checked{% endif %}>
-                {{ day }}
-              </label>
+
+                <strong class="fs-6">{{ day }}</strong>
+
+                {% if weekly.get(idx) %}
+                  <span class="badge dashboard-status-badge dashboard-status-confirmed ms-2">
+                    Active
+                  </span>
+                {% else %}
+                  <span class="badge dashboard-status-badge dashboard-status-rejected ms-2">
+                    Off
+                  </span>
+                {% endif %}
+              </div>
             </div>
 
-            <!-- Start Time -->
+
+
+            <!-- START -->
             <div class="col-md-3">
+              <label class="small text-muted d-block mb-1">Start Time</label>
               <input type="time"
                      name="day_{{ day }}_start"
                      class="form-control"
                      value="{{ weekly[idx].start if weekly.get(idx) else '09:00' }}">
             </div>
 
-            <!-- End Time -->
+
+            <!-- END -->
             <div class="col-md-3">
+              <label class="small text-muted d-block mb-1">End Time</label>
               <input type="time"
                      name="day_{{ day }}_end"
                      class="form-control"
                      value="{{ weekly[idx].end if weekly.get(idx) else '17:00' }}">
             </div>
 
+
+            <!-- INFO -->
+            <div class="col-md-3 text-muted small">
+              {% if weekly.get(idx) %}
+                <i class="bi bi-check2-circle text-success me-1"></i>
+                Students can book this day
+              {% else %}
+                <i class="bi bi-slash-circle text-danger me-1"></i>
+                Not accepting bookings today
+              {% endif %}
+            </div>
+
           </div>
+
         </div>
         {% endfor %}
       </div>
 
-      <!-- Blocked Dates -->
+
+
+
+      <!-- ================= BLOCKED DATES ================= -->
       <div class="p-4 border-top bg-light">
-        <label class="fw-bold">Block Specific Dates</label>
+
+        <label class="fw-bold mb-2 d-block">Block Specific Dates</label>
+
+        <p class="small text-muted">
+          Add dates when you are unavailable (holidays, travel, events).
+        </p>
+
         <input type="text"
                name="blocked_dates"
                class="form-control"
-               placeholder="YYYY-MM-DD, YYYY-MM-DD">
+               placeholder="Example: 2025-02-18, 2025-02-22">
+
       </div>
 
+
+
+      <!-- ================= SAVE ================= -->
       <div class="p-4">
         <button class="btn btn-primary w-100 rounded-pill py-2">
           Save Availability
         </button>
       </div>
+
     </div>
 
   </form>
 </div>
+
+
+
+
+<!-- ================= SCRIPT ================= -->
 <script>
 function copyMondayToAll() {
-  // Get Monday values
   const mondayStart = document.querySelector('[name="day_Monday_start"]').value;
   const mondayEnd   = document.querySelector('[name="day_Monday_end"]').value;
 
   if (!mondayStart || !mondayEnd) {
-    alert("Set Monday time first");
+    alert("Please set Monday time first");
     return;
   }
 
-  const days = [
-    "Tuesday", "Wednesday", "Thursday",
-    "Friday", "Saturday", "Sunday"
-  ];
+  const days = ["Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
   days.forEach(day => {
-    const activeCheckbox = document.querySelector(`[name="day_${day}_active"]`);
-    const startInput = document.querySelector(`[name="day_${day}_start"]`);
-    const endInput   = document.querySelector(`[name="day_${day}_end"]`);
+    const active = document.querySelector('[name="day_' + day + '_active"]');
+    const start = document.querySelector('[name="day_' + day + '_start"]');
+    const end = document.querySelector('[name="day_' + day + '_end"]');
 
-    // Only copy if day is enabled
-    if (activeCheckbox && activeCheckbox.checked) {
-      startInput.value = mondayStart;
-      endInput.value   = mondayEnd;
+    if (active && active.checked) {
+      start.value = mondayStart;
+      end.value = mondayEnd;
     }
   });
 }

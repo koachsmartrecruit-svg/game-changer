@@ -53,19 +53,17 @@
   <div class="container">
     <div class="feature-card card gc-card border-0 overflow-hidden">
       <div class="row g-0 align-items-stretch">
-
+        <div class="col-lg-6 feature-image-col">
+          <img src="{{ url_for('static', filename='images/feature.jpg') }}"
+               class="w-100 h-100 object-fit-cover"
+               alt="Training session">
+        </div>
         <div class="col-lg-6 p-5 d-flex flex-column justify-content-center gap-4">
           <span class="badge feature-pill">Performance Snapshot</span>
           <h2 class="fw-bold">Built for serious players and teams.</h2>
           <p class="lead text-muted">
             Centralize coaching, remove guesswork, and train like elite programs.
           </p>
-        </div>
-
-        <div class="col-lg-6 feature-image-col">
-          <img src="{{ url_for('static', filename='images/feature.jpg') }}"
-               class="w-100 h-100 object-fit-cover"
-               alt="Training session">
         </div>
 
       </div>

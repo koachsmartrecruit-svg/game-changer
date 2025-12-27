@@ -42,24 +42,35 @@
         </li>
 
         {% if current_user.is_authenticated %}
-
           {% if current_user.role == 'coach' %}
           <li class="nav-item">
             <a class="nav-link fw-medium" href="{{ url_for('coach_dashboard') }}">
               Overview
             </a>
           </li>
+
           <li class="nav-item">
             <a class="nav-link fw-medium" href="{{ url_for('coach_bookings') }}">
               Bookings
             </a>
           </li>
+
           <li class="nav-item">
             <a class="nav-link fw-medium" href="{{ url_for('coach_profile') }}">
               Profile
             </a>
           </li>
-          {% endif %}
+
+          <li class="nav-item">
+            <a class="nav-link fw-medium
+              {% if request.endpoint.startswith('coach_availability') %}
+                active
+              {% endif %}"
+              href="{{ url_for('coach_availability') }}">
+              Manage Availability
+            </a>
+          </li>
+        {% endif %}
 
           <!-- User dropdown -->
           <li class="nav-item dropdown ms-lg-3">
