@@ -464,6 +464,7 @@ class User(UserMixin, db.Model):
 class Coach(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
     slug = db.Column(db.String(150), unique=True, nullable=False)
     name = db.Column(db.String(120), nullable=False)
 
@@ -472,13 +473,13 @@ class Coach(db.Model):
     sports_prices = db.Column(db.Text, default="{}")
     price_per_session = db.Column(db.Integer, nullable=False)
 
-    # Location basics
+    # Location
     pincode = db.Column(db.String(10))
     state = db.Column(db.String(100))
     city = db.Column(db.String(120), nullable=False)
-    travel_radius = db.Column(db.Integer, default=0)  # 0 = venue only
+    travel_radius = db.Column(db.Integer, default=0)
 
-    # Profile details
+    # Profile
     experience_years = db.Column(db.Integer, default=0)
     rating = db.Column(db.Float, default=0.0)
     tagline = db.Column(db.String(255))
@@ -489,33 +490,25 @@ class Coach(db.Model):
     achievements = db.Column(db.Text)
     is_verified = db.Column(db.Boolean, default=False)
 
-    # NEW: venue fields
-    venue_name = db.Column(db.String(255))        # e.g. "ABC Turf, Bellandur"
-    venue_address = db.Column(db.String(500))     # full address students should come to
-    venue_map_url = db.Column(db.String(500))     # Google Maps share link
+    # ✅ SOCIAL LINKS (DATABASE FIELDS ONLY)
+    instagram_url = db.Column(db.String(255))
+    youtube_url = db.Column(db.String(255))
+    linkedin_url = db.Column(db.String(255))
+    website_url = db.Column(db.String(255))
 
-    # NEW: availability (blocked dates etc.)
-    availability_json = db.Column(db.Text, default="{}")  # date -> info dict
+    # Venue
+    venue_name = db.Column(db.String(255))
+    venue_address = db.Column(db.String(500))
+    venue_map_url = db.Column(db.String(500))
+
+    # Availability
+    availability_json = db.Column(db.Text, default="{}")
 
     # Relationships
     reviews = db.relationship(
         "Review", backref="coach", lazy=True, cascade="all, delete-orphan"
     )
     bookings_received = db.relationship("Booking", backref="coach", lazy=True)
-    def get_whatsapp_url(self):
-        if not self.phone:
-            return "#"
-
-        clean_number = "".join(filter(str.isdigit, self.phone))
-        if len(clean_number) == 10:
-            clean_number = "91" + clean_number
-
-        message = (
-            f"Hi {self.name}, I saw your profile on GameChanger and I am interested in training."
-        )
-        message = message.replace(" ", "%20")
-
-        return f"https://wa.me/{clean_number}?text={message}"
 
     def get_sports_list(self):
         return self.sport.split(",") if self.sport else []
@@ -527,15 +520,21 @@ class Coach(db.Model):
             return {}
 
     def calculate_rating(self):
-        """Calculate average rating from reviews. Returns 0.0 if no reviews."""
         if not self.reviews:
             return 0.0
-        total_rating = sum(r.rating for r in self.reviews)
-        return round(total_rating / len(self.reviews), 1)
+        return round(sum(r.rating for r in self.reviews) / len(self.reviews), 1)
 
-    def get_rating_display(self):
-        """Get rating for display. Returns 0.0 if no reviews."""
-        return self.calculate_rating()
+    def is_paid(self):
+        return bool(self.user and self.user.stripe_customer_id)
+
+    def get_whatsapp_url(self):
+        if not self.phone:
+            return "#"
+        number = "".join(filter(str.isdigit, self.phone))
+        if len(number) == 10:
+            number = "91" + number
+        msg = f"Hi {self.name}, I saw your profile on GameChanger and I'm interested in training."
+        return f"https://wa.me/{number}?text={msg.replace(' ', '%20')}"
 
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -552,7 +551,8 @@ class Booking(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     locked_until = db.Column(db.DateTime, nullable=True)
     payment_intent_id = db.Column(db.String(255), nullable=True)
-
+    venue_type = db.Column(db.String(20), default="coach_venue")
+    student_address = db.Column(db.String(500), nullable=True)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1212,6 +1212,8 @@ def book_session(coach_id):
     time_slot = request.form.get("time", "").strip()
     message = request.form.get("message", "").strip()
     location = request.form.get("location", "").strip()
+    venue_type = request.form.get("venue_type", "coach_venue")
+    student_address = request.form.get("student_address", "").strip()
 
     # Validate required fields
     if not sport:
@@ -1236,6 +1238,11 @@ def book_session(coach_id):
             price_per_session = int(price_map[sport])
     except Exception:
         pass
+    
+    #validate
+    if venue_type == "student_home" and not student_address:
+        flash("Please enter your home address.", "danger")
+        return redirect(url_for("coach_detail", slug=coach.slug))
 
     # Validate date
     date_valid, date_result = validate_date(date_str)
@@ -1296,16 +1303,22 @@ def book_session(coach_id):
         initial_status = "Confirmed"
 
     new_booking = Booking(
-    coach_id=coach.id,
-    user_id=current_user.id,
-    sport=sanitize_input(sport),
-    booking_date=date_obj,
-    booking_time=time_result,
-    message=sanitize_input(message, max_length=1000),
-    location=sanitize_input(location, max_length=255),
-    status=initial_status,
-    locked_until=lock_until
+        coach_id=coach.id,
+        user_id=current_user.id,
+        sport=sanitize_input(sport),
+        booking_date=date_obj,
+        booking_time=time_result,
+        venue_type=venue_type,
+        student_address=sanitize_input(student_address, max_length=500),
+        location=(
+            coach.venue_address if venue_type == "coach_venue"
+            else sanitize_input(student_address, max_length=255)
+        ),
+        message=sanitize_input(message, max_length=1000),
+        status=initial_status,
+        locked_until=lock_until
     )
+
 
     db.session.add(new_booking)
     db.session.commit()
@@ -1647,6 +1660,10 @@ def coach_dashboard():
         age_raw = (request.form.get("age") or "").strip()
         phone = (request.form.get("phone") or "").strip()
         travel_raw = (request.form.get("travel_radius") or "").strip()
+        instagram_url = request.form.get("instagram_url", "").strip()
+        youtube_url = request.form.get("youtube_url", "").strip()
+        linkedin_url = request.form.get("linkedin_url", "").strip()
+        website_url = request.form.get("website_url", "").strip()
 
         # NEW: venue fields
         venue_name = (request.form.get("venue_name") or "").strip()
@@ -1740,7 +1757,11 @@ def coach_dashboard():
                     venue_name=sanitize_input(venue_name, max_length=120),
                     venue_address=sanitize_input(venue_address, max_length=255),
                     venue_map_url=sanitize_input(venue_map_url, max_length=255),
-                )
+                    instagram_url=sanitize_input(instagram_url, max_length=255),
+                    youtube_url=sanitize_input(youtube_url, max_length=255),
+                    linkedin_url=sanitize_input(linkedin_url, max_length=255),
+                    website_url=sanitize_input(website_url, max_length=255),
+                    )
                 db.session.add(coach)
             else:
                 # Update existing profile
@@ -1763,6 +1784,10 @@ def coach_dashboard():
                 coach.venue_name = sanitize_input(venue_name, max_length=120)
                 coach.venue_address = sanitize_input(venue_address, max_length=255)
                 coach.venue_map_url = sanitize_input(venue_map_url, max_length=255)
+                coach.instagram_url = sanitize_input(instagram_url, max_length=255)
+                coach.youtube_url = sanitize_input(youtube_url, max_length=255)
+                coach.linkedin_url = sanitize_input(linkedin_url, max_length=255)
+                coach.website_url = sanitize_input(website_url, max_length=255)
 
             db.session.commit()
             flash("Profile updated successfully!", "success")

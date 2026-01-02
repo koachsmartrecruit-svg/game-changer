@@ -23,7 +23,6 @@
     </div>
   </div>
 
-
   <!-- ================= FILTER BAR ================= -->
   <div class="d-flex justify-content-end mb-4">
     <div class="btn-group btn-group-sm shadow-sm">
@@ -56,8 +55,6 @@
     </div>
   </div>
 
-
-
   <!-- ================= BOOKINGS LIST ================= -->
   <div class="card gc-card border-0 rounded-4 overflow-hidden">
 
@@ -66,25 +63,22 @@
       <small class="text-muted">Students who hired you</small>
     </div>
 
-
     <div class="card-body p-0">
 
       {% if received_bookings %}
       <div class="list-group list-group-flush">
 
         {% for booking in received_bookings %}
-
         <div class="list-group-item border-0 p-4 dashboard-list-item">
 
           <div class="d-flex align-items-start gap-3">
 
-
             <!-- Avatar -->
             {% if booking.student.profile_image %}
               <img src="{{ url_for('static', filename='uploads/' + booking.student.profile_image) }}"
-                class="rounded-circle border"
-                width="48" height="48"
-                style="object-fit: cover;">
+                   class="rounded-circle border"
+                   width="48" height="48"
+                   style="object-fit: cover;">
             {% else %}
               <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
                    style="width:48px;height:48px;">
@@ -92,15 +86,12 @@
               </div>
             {% endif %}
 
-
             <!-- DETAILS -->
             <div class="flex-grow-1">
 
               <div class="d-flex justify-content-between align-items-center">
-
                 <div>
                   <h6 class="fw-bold mb-0">{{ booking.student.name }}</h6>
-
                   <small class="text-muted">
                     {{ booking.sport }} Session •
                     {{ booking.booking_date.strftime('%d %b %Y') }} @ {{ booking.booking_time }}
@@ -117,25 +108,37 @@
                   {% endif %}">
                   {{ booking.status }}
                 </span>
-
               </div>
 
+              <!-- LOCATION (UPDATED LOGIC) -->
+              {% if booking.venue_type == 'student_home' %}
+                <div class="mt-2 d-flex flex-column gap-1">
+                  <span class="badge bg-warning text-dark d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-house-door-fill"></i>
+                    Student’s Home
+                  </span>
+                  <div class="small text-muted">
+                    {{ booking.student_address or "Address not provided" }}
+                  </div>
+                </div>
+              {% else %}
+                <div class="mt-2 d-flex flex-column gap-1">
+                  <span class="badge bg-success d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    Coach Venue
+                  </span>
+                  <div class="small text-muted">
+                    {{ booking.location or "Location not specified" }}
+                  </div>
+                </div>
+              {% endif %}
 
-
-              <!-- Location -->
-              <div class="mt-2 small dashboard-location-chip px-2 py-1 d-inline-flex align-items-center gap-1">
-                <i class="bi bi-geo-alt-fill"></i>
-                {{ booking.location or "No location specified" }}
-              </div>
-
-
-              <!-- Note -->
+              <!-- NOTE -->
               {% if booking.message %}
               <div class="small fst-italic text-secondary mt-2">
                 “{{ booking.message }}”
               </div>
               {% endif %}
-
 
               <!-- ACTION BUTTONS -->
               {% if booking.status == 'Pending' %}
@@ -165,13 +168,10 @@
             </div>
 
           </div>
-
         </div>
-
         {% endfor %}
 
       </div>
-
 
       {% else %}
       <!-- EMPTY STATE -->
@@ -184,9 +184,7 @@
       </div>
       {% endif %}
 
-
     </div>
-
   </div>
 
 </div>

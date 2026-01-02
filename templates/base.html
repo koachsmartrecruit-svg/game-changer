@@ -63,7 +63,7 @@
 
           <li class="nav-item">
             <a class="nav-link fw-medium
-              {% if request.endpoint.startswith('coach_availability') %}
+              {% if request.endpoint and request.endpoint.startswith('coach_availability') %}
                 active
               {% endif %}"
               href="{{ url_for('coach_availability') }}">

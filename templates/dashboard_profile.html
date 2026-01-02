@@ -112,7 +112,10 @@
 
     <!-- ================= RIGHT FORM ================= -->
     <div class="col-lg-8">
-      <form method="POST" enctype="multipart/form-data">
+      <form method="POST"
+      action="{{ url_for('coach_dashboard') }}"
+      enctype="multipart/form-data">
+
 
         <div class="card dashboard-form-card p-4 p-lg-5">
 
@@ -277,7 +280,38 @@
                    value="{{ coach.specialties if coach else '' }}">
           </div>
 
+          <!-- SOCIAL LINKS -->
+          <h5 class="fw-bold mb-3">Social Links</h5>
 
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label small">Instagram</label>
+              <input type="url" name="instagram_url"
+                    class="form-control"
+                    value="{{ coach.instagram_url or '' }}">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small">YouTube</label>
+              <input type="url" name="youtube_url"
+                    class="form-control"
+                    value="{{ coach.youtube_url or '' }}">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small">LinkedIn</label>
+              <input type="url" name="linkedin_url"
+                    class="form-control"
+                    value="{{ coach.linkedin_url or '' }}">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small">Website</label>
+              <input type="url" name="website_url"
+                    class="form-control"
+                    value="{{ coach.website_url or '' }}">
+            </div>
+          </div>
 
           <button type="submit"
                   class="btn btn-primary btn-lg rounded-pill w-100">
