@@ -3,7 +3,6 @@
 
 <div class="container py-4 py-lg-5">
 
-  <!-- ================= HEADER ================= -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h2 serif-font mb-0">Coach Studio</h1>
@@ -19,8 +18,25 @@
       {% endif %}
   </div>
 
+  {% set score = coach.completion_score() if coach else 0 %}
 
-  <!-- ================= TOP NAV ================= -->
+  <div class="alert alert-info rounded-4 mb-4">
+    <strong>Profile Completion:</strong> {{ score }}%
+
+    <div class="progress mt-2" style="height:8px;">
+      <div class="progress-bar bg-success"
+           style="width: {{ score }}%">
+      </div>
+    </div>
+
+    {% if score < 70 %}
+      <small class="text-danger d-block mt-2">
+        Complete your profile to start receiving bookings.
+      </small>
+    {% endif %}
+  </div>
+
+
   <div class="btn-group mb-4 shadow-sm">
     <a href="{{ url_for('coach_dashboard') }}" class="btn btn-dark active">Overview</a>
     <a href="{{ url_for('coach_bookings') }}" class="btn btn-outline-dark">Bookings</a>
@@ -31,7 +47,6 @@
   </div>
 
 
-  <!-- ================= STATS ================= -->
   {% if coach and stats %}
   <div class="row g-3 mb-5">
 
@@ -75,10 +90,8 @@
 
 
 
-  <!-- ================= MAIN LAYOUT ================= -->
   <div class="row g-4">
 
-    <!-- ================= LEFT : MY SCHEDULE ================= -->
     <div class="col-lg-6">
       <div class="card border-0 rounded-4 h-100">
 
@@ -138,7 +151,6 @@
 
 
 
-    <!-- ================= RIGHT : RECENT BOOKINGS ================= -->
     <div class="col-lg-6">
       <div class="card border-0 rounded-4 h-100">
 

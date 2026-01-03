@@ -535,6 +535,46 @@ class Coach(db.Model):
             number = "91" + number
         msg = f"Hi {self.name}, I saw your profile on GameChanger and I'm interested in training."
         return f"https://wa.me/{number}?text={msg.replace(' ', '%20')}"
+    def completion_score(self):
+        score = 0
+
+        if self.profile_image and self.profile_image != "default_coach.jpg":
+            score += 10
+
+        if self.city and self.state:
+            score += 10
+
+        if self.phone:
+            score += 10
+
+        prices = self.get_price_dict()
+        if prices and any(p > 0 for p in prices.values()):
+            score += 15
+        if self.experience_years and self.age:
+            score += 10
+
+        if self.venues and len(self.venues) > 0:
+            score += 15
+
+        if self.weekly_availability and len(self.weekly_availability) > 0:
+            score += 15
+
+        if self.achievements or self.specialties:
+            score += 10
+
+        return score
+
+class CoachVenue(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    coach_id = db.Column(db.Integer, db.ForeignKey("coach.id"), nullable=False)
+
+    name = db.Column(db.String(120), nullable=False)
+    address = db.Column(db.String(255), nullable=False)
+    map_url = db.Column(db.String(255), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    coach = db.relationship("Coach", backref="venues")
 
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1206,16 +1246,24 @@ def coach_detail(slug):
 def book_session(coach_id):
     coach = Coach.query.get_or_404(coach_id)
     
-    # Get and validate form data
+    # Get form data
     sport = request.form.get("sport", "").strip()
     date_str = request.form.get("date", "").strip()
     time_slot = request.form.get("time", "").strip()
     message = request.form.get("message", "").strip()
-    location = request.form.get("location", "").strip()
+    
+    # New Venue inputs
     venue_type = request.form.get("venue_type", "coach_venue")
     student_address = request.form.get("student_address", "").strip()
+    venue_id = request.form.get("venue_id")
+    if coach.completion_score() < 70:
+        flash(
+            "Coach profile is incomplete. Bookings are disabled until profile is completed.",
+            "warning"
+        )
+        return redirect(url_for("coach_detail", slug=coach.slug))
 
-    # Validate required fields
+    # --- 1. Validate Basic Fields ---
     if not sport:
         flash("Please select a sport.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
@@ -1230,7 +1278,7 @@ def book_session(coach_id):
         flash("Invalid sport selected.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 
-    # Sport-wise price (fallback: coach.price_per_session)
+    # --- 2. Determine Price ---
     price_per_session = coach.price_per_session
     try:
         price_map = coach.get_price_dict() or {}
@@ -1239,17 +1287,44 @@ def book_session(coach_id):
     except Exception:
         pass
     
-    #validate
-    if venue_type == "student_home" and not student_address:
-        flash("Please enter your home address.", "danger")
+    # --- 3. Validate & Resolve Location (UPDATED LOGIC) ---
+    location = None
+    
+    if venue_type == "coach_venue":
+        # User selected a specific coach venue
+        venue = CoachVenue.query.filter_by(
+            id=venue_id,
+            coach_id=coach.id
+        ).first()
+
+        if not venue:
+            flash("Invalid venue selected.", "danger")
+            return redirect(url_for("coach_detail", slug=coach.slug))
+
+        location = venue.address
+        # Optional: Append name to address for clarity if needed
+        # location = f"{venue.name} ({venue.address})"
+        
+    else:
+        # User selected 'Coach comes to my home'
+        if not student_address:
+            flash("Please enter your home address.", "danger")
+            return redirect(url_for("coach_detail", slug=coach.slug))
+
+        location = student_address
+
+    # Validate location length
+    if len(location) > 255:
+        flash("Location address is too long (max 255 characters).", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 
-    # Validate date
+    # --- 4. Validate Date & Time ---
     date_valid, date_result = validate_date(date_str)
     if not date_valid:
         flash(date_result, "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
     date_obj = date_result
+
     # Blocked date check
     availability = {}
     if coach.availability_json:
@@ -1262,7 +1337,7 @@ def book_session(coach_id):
     if date_key in availability and availability[date_key].get("blocked"):
         flash("Coach is unavailable on this date. Please choose another day.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
-    # Validate time
+
     time_valid, time_result = validate_time(time_slot)
     if not time_valid:
         flash(time_result, "danger")
@@ -1273,29 +1348,24 @@ def book_session(coach_id):
         flash("Message is too long (max 1000 characters).", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 
-    # Validate location length
-    if location and len(location) > 255:
-        flash("Location is too long (max 255 characters).", "danger")
-        return redirect(url_for("coach_detail", slug=coach.slug))
-
+    # --- 5. Check for Double Booking ---
     existing_booking = Booking.query.filter_by(
         coach_id=coach.id,
         booking_date=date_obj,
         booking_time=time_slot
     ).filter(
-    (Booking.status == "Confirmed") |
-    (
-        (Booking.status == "Payment Pending") &
-        (Booking.locked_until > datetime.utcnow())
-    )
-).first()
-
+        (Booking.status == "Confirmed") |
+        (
+            (Booking.status == "Payment Pending") &
+            (Booking.locked_until > datetime.utcnow())
+        )
+    ).first()
 
     if existing_booking:
         flash("This time slot is already booked. Please choose another.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
 
-    # Initial status based on price
+    # --- 6. Create Booking Record ---
     lock_until = datetime.utcnow() + timedelta(minutes=PAYMENT_LOCK_MINUTES)
     initial_status = "Payment Pending"
 
@@ -1310,29 +1380,27 @@ def book_session(coach_id):
         booking_time=time_result,
         venue_type=venue_type,
         student_address=sanitize_input(student_address, max_length=500),
-        location=(
-            coach.venue_address if venue_type == "coach_venue"
-            else sanitize_input(student_address, max_length=255)
-        ),
+        location=sanitize_input(location, max_length=255),  # Using the resolved location
         message=sanitize_input(message, max_length=1000),
         status=initial_status,
         locked_until=lock_until
     )
 
-
     db.session.add(new_booking)
     db.session.commit()
 
-    # Free bookings – no payment
+    # --- 7. Handle Payment / Completion ---
+    
+    # Free bookings – no payment needed
     if price_per_session == 0:
         flash("Booking confirmed!", "success")
         return redirect(url_for("coach_dashboard"))
 
-    # Create Stripe Session for paid coaches
+    # Paid bookings - Create Stripe Session
     try:
         checkout_session = stripe.checkout.Session.create(
             mode="payment",
-            customer_email=current_user.email,  # Pre-fill user email
+            customer_email=current_user.email,
             line_items=[{
                 'price_data': {
                     'currency': 'inr',
@@ -1359,6 +1427,21 @@ def book_session(coach_id):
         db.session.commit()
         flash("Error initializing payment. Please try again.", "danger")
         return redirect(url_for("coach_detail", slug=coach.slug))
+@app.route("/coach/venues/delete/<int:venue_id>", methods=["POST"])
+@coach_required
+def delete_coach_venue(venue_id):
+    coach = current_user.coach_profile
+
+    venue = CoachVenue.query.filter_by(
+        id=venue_id,
+        coach_id=coach.id
+    ).first_or_404()
+
+    db.session.delete(venue)
+    db.session.commit()
+
+    flash("Venue removed successfully.", "success")
+    return redirect(url_for("coach_profile"))
 
 @app.route("/booking/<int:booking_id>/status", methods=["POST"])
 @coach_required
@@ -2288,6 +2371,31 @@ def chatbot():
         response += "Try asking one of these questions!"
         
         return jsonify({"response": response, "type": "general"})
+@app.route("/coach/venues/add", methods=["POST"])
+@coach_required
+def add_coach_venue():
+    coach = current_user.coach_profile
+
+    name = request.form.get("venue_name", "").strip()
+    address = request.form.get("venue_address", "").strip()
+    map_url = request.form.get("venue_map_url", "").strip()
+
+    if not name or not address:
+        flash("Venue name and address are required.", "danger")
+        return redirect(url_for("coach_profile"))
+
+    venue = CoachVenue(
+        coach_id=coach.id,
+        name=name,
+        address=address,
+        map_url=map_url
+    )
+
+    db.session.add(venue)
+    db.session.commit()
+
+    flash("Venue added successfully!", "success")
+    return redirect(url_for("coach_profile"))
 
 @app.route("/api/coach/<int:coach_id>/slots")
 def get_available_slots(coach_id):

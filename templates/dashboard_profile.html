@@ -3,7 +3,6 @@
 
 <div class="container py-4 py-lg-5">
 
-  <!-- ================= HEADER ================= -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h2 serif-font mb-0">Coach Profile</h1>
@@ -24,19 +23,14 @@
   </div>
 
 
-
   <div class="row g-4">
 
-
-    <!-- ================= LEFT SIDEBAR ================= -->
     <div class="col-lg-4">
 
       <div class="card dashboard-sidebar-card text-center p-4 sticky-top" style="top:20px;">
 
-
         {% set display_name = coach.name if coach else current_user.name %}
 
-        <!-- Avatar -->
         <div class="mb-3">
           {% if coach and coach.profile_image %}
             <img src="{{ url_for('static', filename='uploads/' + coach.profile_image) }}"
@@ -51,17 +45,11 @@
           {% endif %}
         </div>
 
-
-        <!-- Name -->
         <h4 class="fw-bold mb-1">{{ display_name }}</h4>
         <p class="text-muted small mb-2">{{ current_user.email }}</p>
 
-
         <hr class="opacity-25">
 
-
-
-        <!-- Verification -->
         {% if coach and coach.is_verified %}
           <div class="dashboard-verify-card dashboard-verify-card-success">
             <i class="bi bi-patch-check-fill me-1"></i>
@@ -92,8 +80,6 @@
           </div>
         {% endif %}
 
-
-
         {% if coach %}
         <a href="{{ url_for('coach_detail', slug=coach.slug) }}"
            target="_blank"
@@ -107,20 +93,63 @@
     </div>
 
 
-
-
-
-    <!-- ================= RIGHT FORM ================= -->
     <div class="col-lg-8">
-      <form method="POST"
-      action="{{ url_for('coach_dashboard') }}"
-      enctype="multipart/form-data">
 
+      <div class="card dashboard-form-card p-4 p-lg-5 mb-4">
+        <h5 class="fw-bold mb-3">Training Venues</h5>
+
+        <form method="POST" action="{{ url_for('add_coach_venue') }}">
+          <div class="mb-2">
+            <input name="venue_name" class="form-control" placeholder="Venue name" required>
+          </div>
+
+          <div class="mb-2">
+            <textarea name="venue_address"
+                      class="form-control"
+                      placeholder="Full address"
+                      required></textarea>
+          </div>
+
+          <div class="mb-2">
+            <input name="venue_map_url"
+                   class="form-control"
+                   placeholder="Google Maps link (optional)">
+          </div>
+
+          <button class="btn btn-outline-primary btn-sm">
+            Add Venue
+          </button>
+        </form>
+
+        {% if coach.venues %}
+          <ul class="list-group mt-3">
+            {% for v in coach.venues %}
+              <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div>
+                  <strong>{{ v.name }}</strong><br>
+                  <small class="text-muted">{{ v.address }}</small>
+                </div>
+
+                <form method="POST"
+                      action="{{ url_for('delete_coach_venue', venue_id=v.id) }}"
+                      onsubmit="return confirm('Delete this venue?');">
+                  <button class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+
+
+      <form method="POST"
+            action="{{ url_for('coach_dashboard') }}"
+            enctype="multipart/form-data">
 
         <div class="card dashboard-form-card p-4 p-lg-5">
 
-
-          <!-- ACCOUNT DETAILS -->
           <h5 class="fw-bold mb-3">Account Details</h5>
 
           <div class="row g-3 mb-4">
@@ -154,40 +183,7 @@
           </div>
 
 
-
-
-          <!-- PROFESSIONAL PROFILE -->
           <h5 class="fw-bold mb-3">Professional Profile</h5>
-
-
-          <div class="mb-3">
-            <label class="form-label small">Training Venue</label>
-            <input type="text" name="venue_name"
-                   class="form-control"
-                   value="{{ coach.venue_name if coach else '' }}"
-                   placeholder="Venue name" required>
-          </div>
-
-
-          <div class="mb-3">
-            <label class="form-label small">Venue Address</label>
-            <textarea name="venue_address"
-                      class="form-control"
-                      rows="2"
-                      required>{{ coach.venue_address if coach else '' }}</textarea>
-          </div>
-
-
-          <div class="mb-4">
-            <label class="form-label small">Google Maps Link</label>
-            <input type="url" name="venue_map_url"
-                   class="form-control"
-                   value="{{ coach.venue_map_url if coach else '' }}"
-                   required>
-          </div>
-
-
-
 
           <div class="row g-3 mb-4">
 
@@ -222,9 +218,6 @@
           </div>
 
 
-
-
-          <!-- SPORTS & PRICING -->
           <h5 class="fw-bold mb-3">Sports & Pricing</h5>
 
           <div class="row g-2 mb-4">
@@ -259,11 +252,7 @@
           </div>
 
 
-
-
-          <!-- BIO -->
           <h5 class="fw-bold mb-3">Bio & Achievements</h5>
-
 
           <div class="mb-3">
             <label class="form-label small">Achievements</label>
@@ -272,7 +261,6 @@
                       rows="4">{{ coach.achievements if coach else '' }}</textarea>
           </div>
 
-
           <div class="mb-4">
             <label class="form-label small">Specialties</label>
             <input type="text" name="specialties"
@@ -280,36 +268,35 @@
                    value="{{ coach.specialties if coach else '' }}">
           </div>
 
-          <!-- SOCIAL LINKS -->
           <h5 class="fw-bold mb-3">Social Links</h5>
 
           <div class="row g-3 mb-4">
             <div class="col-md-6">
               <label class="form-label small">Instagram</label>
               <input type="url" name="instagram_url"
-                    class="form-control"
-                    value="{{ coach.instagram_url or '' }}">
+                     class="form-control"
+                     value="{{ coach.instagram_url or '' }}">
             </div>
 
             <div class="col-md-6">
               <label class="form-label small">YouTube</label>
               <input type="url" name="youtube_url"
-                    class="form-control"
-                    value="{{ coach.youtube_url or '' }}">
+                     class="form-control"
+                     value="{{ coach.youtube_url or '' }}">
             </div>
 
             <div class="col-md-6">
               <label class="form-label small">LinkedIn</label>
               <input type="url" name="linkedin_url"
-                    class="form-control"
-                    value="{{ coach.linkedin_url or '' }}">
+                     class="form-control"
+                     value="{{ coach.linkedin_url or '' }}">
             </div>
 
             <div class="col-md-6">
               <label class="form-label small">Website</label>
               <input type="url" name="website_url"
-                    class="form-control"
-                    value="{{ coach.website_url or '' }}">
+                     class="form-control"
+                     value="{{ coach.website_url or '' }}">
             </div>
           </div>
 
@@ -318,7 +305,6 @@
             Save Profile
           </button>
 
-
         </div>
       </form>
     </div>
@@ -326,7 +312,6 @@
   </div>
 
 </div>
-
 
 
 {% if coach %}

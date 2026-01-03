@@ -3,10 +3,8 @@
 
 <div class="container coach-detail-page py-4 py-lg-5">
 
-  <!-- ================= TOP SECTION ================= -->
   <div class="row g-4 mb-4 align-items-center">
 
-    <!-- LEFT: Avatar -->
     <div class="col-md-3 text-center text-md-start">
       {% set display_name = coach.name %}
 
@@ -30,7 +28,6 @@
       {% endif %}
     </div>
 
-    <!-- CENTER -->
     <div class="col-md-6">
       <h1 class="h3">{{ coach.name }}</h1>
       <p class="text-muted">{{ coach.tagline }}</p>
@@ -48,7 +45,6 @@
       {% endfor %}
     </div>
 
-    <!-- RIGHT -->
     <div class="col-md-3 text-center text-md-end">
       {% set prices = coach.get_price_dict() %}
       {% if prices %}
@@ -56,21 +52,60 @@
       {% else %}
         <p>Contact for price</p>
       {% endif %}
+
+      {% if coach.is_paid() and coach.phone %}
+        <a href="{{ coach.get_whatsapp_url() }}"
+           target="_blank"
+           class="btn btn-success w-100 rounded-pill mb-2 mt-2">
+          <i class="bi bi-whatsapp me-1"></i> Chat on WhatsApp
+        </a>
+      {% endif %}
+
+      {% if coach.is_paid() %}
+        <div class="d-flex justify-content-center gap-2 mt-2">
+
+          {% if coach.instagram_url %}
+            <a href="{{ coach.instagram_url }}" target="_blank"
+               class="btn btn-outline-danger btn-sm rounded-pill">
+              <i class="bi bi-instagram"></i>
+            </a>
+          {% endif %}
+
+          {% if coach.youtube_url %}
+            <a href="{{ coach.youtube_url }}" target="_blank"
+               class="btn btn-outline-danger btn-sm rounded-pill">
+              <i class="bi bi-youtube"></i>
+            </a>
+          {% endif %}
+
+          {% if coach.linkedin_url %}
+            <a href="{{ coach.linkedin_url }}" target="_blank"
+               class="btn btn-outline-primary btn-sm rounded-pill">
+              <i class="bi bi-linkedin"></i>
+            </a>
+          {% endif %}
+
+          {% if coach.website_url %}
+            <a href="{{ coach.website_url }}" target="_blank"
+               class="btn btn-outline-dark btn-sm rounded-pill">
+              <i class="bi bi-globe"></i>
+            </a>
+          {% endif %}
+
+        </div>
+      {% endif %}
     </div>
   </div>
 
-  <!-- ================= BOOKING FORM ================= -->
   <form method="POST"
         action="{{ url_for('book_session', coach_id=coach.id) }}"
         id="booking">
 
-    <!-- REQUIRED SPORT (backend needs this) -->
     <input type="hidden" name="sport" value="{{ coach.get_sports_list()[0] }}">
 
     <div class="row mt-4">
       <div class="col-md-6">
 
-        <!-- ===== Venue Selection ===== -->
         <label class="fw-bold mb-2">Training Location</label>
 
         <div class="form-check">
@@ -79,20 +114,34 @@
                  name="venue_type"
                  value="coach_venue"
                  checked
-                 onclick="toggleAddress(false)">
-          <label class="form-check-label">Coach’s Training Venue</label>
+                 onclick="toggleVenueSelect(true)">
+          <label class="form-check-label">
+            Coach’s Training Venue
+          </label>
         </div>
 
-        <div class="form-check mb-3">
+        <div class="form-check mb-2">
           <input class="form-check-input"
                  type="radio"
                  name="venue_type"
                  value="student_home"
-                 onclick="toggleAddress(true)">
-          <label class="form-check-label">Coach comes to my home</label>
+                 onclick="toggleVenueSelect(false)">
+          <label class="form-check-label">
+            Coach comes to my home
+          </label>
         </div>
 
-        <!-- Student Address -->
+        <div id="coachVenueBox" class="mb-3">
+          <label class="fw-bold">Select Venue</label>
+          <select name="venue_id" class="form-select">
+            {% for v in coach.venues %}
+              <option value="{{ v.id }}">
+                {{ v.name }} – {{ v.address }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
         <div id="studentAddressBox" class="mb-3 d-none">
           <label class="fw-bold">Your Address</label>
           <textarea name="student_address"
@@ -100,8 +149,6 @@
                     rows="3"
                     placeholder="House no, area, landmark, pincode"></textarea>
         </div>
-
-        <!-- ===== Date Picker ===== -->
         <div class="mb-3">
           <label class="fw-bold">Select Date</label>
           <input type="date"
@@ -111,7 +158,6 @@
                  required>
         </div>
 
-        <!-- ===== Time Slots ===== -->
         <div class="mb-3">
           <label class="fw-bold">Select Time</label>
           <select name="time"
@@ -122,7 +168,6 @@
           </select>
         </div>
 
-        <!-- ===== Message ===== -->
         <div class="mb-4">
           <label class="fw-bold">Message (optional)</label>
           <textarea name="message"
@@ -131,11 +176,16 @@
                     placeholder="Any goals or notes for the coach?"></textarea>
         </div>
 
-        <!-- ===== Submit ===== -->
-        <button type="submit"
-                class="btn btn-primary btn-lg rounded-pill px-5">
-          Confirm Booking Request
-        </button>
+        {% if coach.completion_score() < 70 %}
+          <div class="alert alert-warning mt-3">
+            🚧 Coach profile is being completed. Bookings temporarily unavailable.
+          </div>
+        {% else %}
+          <button type="submit"
+                  class="btn btn-primary btn-lg rounded-pill px-5">
+            Confirm Booking Request
+          </button>
+        {% endif %}
 
       </div>
     </div>
@@ -143,12 +193,17 @@
   </form>
 </div>
 
-<!-- ================= JS ================= -->
 <script>
-function toggleAddress(show) {
+
+function toggleVenueSelect(isCoachVenue) {
+  document.getElementById("coachVenueBox")
+    .classList.toggle("d-none", !isCoachVenue);
+
   document.getElementById("studentAddressBox")
-    .classList.toggle("d-none", !show);
+    .classList.toggle("d-none", isCoachVenue);
 }
+
+
 
 const dateInput = document.getElementById("bookingDate");
 const timeSelect = document.getElementById("timeSlotSelect");
