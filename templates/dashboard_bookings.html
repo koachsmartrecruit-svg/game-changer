@@ -98,16 +98,18 @@
                   </small>
                 </div>
 
-                <span class="badge dashboard-status-badge
-                  {% if booking.status == 'Confirmed' %}
-                    dashboard-status-confirmed
-                  {% elif booking.status == 'Rejected' %}
-                    dashboard-status-rejected
-                  {% else %}
-                    dashboard-status-pending
-                  {% endif %}">
-                  {{ booking.status }}
-                </span>
+                {% if booking.payment_mode %}
+                  <span class="badge bg-light text-dark ms-2">
+                    {% if booking.payment_mode == 'online' %}
+                      💳 Online
+                    {% elif booking.payment_mode == 'upi' %}
+                      📲 UPI
+                    {% elif booking.payment_mode == 'cash' %}
+                      💵 Cash
+                    {% endif %}
+                  </span>
+                {% endif %}
+
               </div>
 
               <!-- LOCATION (UPDATED LOGIC) -->

@@ -22,6 +22,19 @@
     </div>
   </div>
 
+    {# 🔔 PROFILE COMPLETION ALERT #}
+  {% if coach and coach.completion_score() < 70 %}
+  <div class="alert alert-warning rounded-4 shadow-sm mb-4">
+    <strong>Profile incomplete.</strong><br>
+    Complete your profile to enable bookings.
+    <span class="d-block mt-1">
+      Completion: {{ coach.completion_score() }}% (minimum 70% required)
+    </span>
+    <a href="{{ url_for('coach_profile') }}" class="btn btn-sm btn-outline-dark mt-2">
+      Complete Profile
+    </a>
+  </div>
+  {% endif %}
 
   <div class="row g-4">
 

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-5" style="max-width:520px">
+
+  <h3 class="fw-bold mb-2">Complete Payment</h3>
+  <p class="text-muted mb-4">
+    Booking with <strong>{{ booking.coach.name }}</strong><br>
+    {{ booking.booking_date }} @ {{ booking.booking_time }}
+  </p>
+
+  <div class="alert alert-warning small">
+    ⚠️ Test Mode — No real payment will be charged
+  </div>
+
+  <!-- TEST PAYMENT BUTTONS -->
+  <form method="POST" action="{{ url_for('test_payment', booking_id=booking.id) }}">
+
+    <button class="btn btn-dark w-100 mb-2">
+      <i class="bi bi-google"></i> Pay with Google Pay (Test)
+    </button>
+
+    <button class="btn btn-dark w-100 mb-2">
+      <i class="bi bi-phone"></i> Pay with PhonePe (Test)
+    </button>
+
+    <button class="btn btn-outline-dark w-100">
+      <i class="bi bi-upc-scan"></i> Pay via UPI ID / QR (Test)
+    </button>
+
+  </form>
+
+</div>
+
+{% endblock %}

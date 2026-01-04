@@ -2024,3 +2024,149 @@ i.bi {
 .gc-section + .gc-section {
   padding-top: 48px;
 }
+/* Booking Page Polish */
+.coach-detail-page label {
+  font-weight: 600;
+}
+
+.coach-detail-page .form-control,
+.coach-detail-page .form-select {
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.coach-detail-page .form-control:focus,
+.coach-detail-page .form-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.coach-detail-page button.btn-primary {
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+}
+
+.coach-detail-page .card {
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+/* ===============================
+   AVAILABILITY / SLOTS UI
+   =============================== */
+
+/* Card polish */
+.gc-card {
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+/* Day rows */
+.dashboard-list-item {
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.dashboard-list-item:hover {
+  background: #f9fafb;
+}
+
+/* Day toggle + label */
+.dashboard-list-item strong {
+  font-weight: 600;
+}
+
+/* Active / Off badges */
+.dashboard-status-badge {
+  font-size: 0.7rem;
+  padding: 0.35em 0.6em;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.dashboard-status-confirmed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.dashboard-status-rejected {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+/* Time inputs */
+input[type="time"] {
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 500;
+  border: 1px solid #e5e7eb;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="time"]:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+
+/* Checkbox alignment */
+.form-check-input {
+  cursor: pointer;
+  transform: scale(1.05);
+}
+
+/* Info text */
+.dashboard-list-item .small {
+  line-height: 1.4;
+}
+
+/* Blocked dates section */
+input[name="blocked_dates"] {
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 0.9rem;
+}
+
+/* Copy Monday button */
+.btn-outline-dark {
+  border-radius: 999px;
+}
+
+/* Save button */
+button.btn-primary {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* ===============================
+   MOBILE OPTIMIZATION
+   =============================== */
+@media (max-width: 768px) {
+  .dashboard-list-item .row {
+    gap: 10px;
+  }
+
+  .dashboard-list-item .col-md-3 {
+    text-align: left !important;
+  }
+}
+/* Booking Page Polish */
+.coach-detail-page label {
+  font-weight: 600;
+}
+
+.coach-detail-page .form-control,
+.coach-detail-page .form-select {
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.coach-detail-page .form-control:focus,
+.coach-detail-page .form-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.coach-detail-page button.btn-primary {
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+}
+
+.coach-detail-page .card {
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}

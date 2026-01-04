@@ -495,12 +495,6 @@ class Coach(db.Model):
     youtube_url = db.Column(db.String(255))
     linkedin_url = db.Column(db.String(255))
     website_url = db.Column(db.String(255))
-
-    # Venue
-    venue_name = db.Column(db.String(255))
-    venue_address = db.Column(db.String(500))
-    venue_map_url = db.Column(db.String(500))
-
     # Availability
     availability_json = db.Column(db.Text, default="{}")
 
@@ -538,6 +532,7 @@ class Coach(db.Model):
     def completion_score(self):
         score = 0
 
+        # Profile basics
         if self.profile_image and self.profile_image != "default_coach.jpg":
             score += 10
 
@@ -547,22 +542,29 @@ class Coach(db.Model):
         if self.phone:
             score += 10
 
+        # Sports & pricing
         prices = self.get_price_dict()
-        if prices and any(p > 0 for p in prices.values()):
+        if prices and any(int(p) > 0 for p in prices.values()):
             score += 15
+
+        # Experience
         if self.experience_years and self.age:
             score += 10
 
-        if self.venues and len(self.venues) > 0:
+        # ✅ Multi venues (mandatory)
+        if self.venues and len(self.venues) >= 1:
             score += 15
 
-        if self.weekly_availability and len(self.weekly_availability) > 0:
+        # ✅ Availability (mandatory)
+        if self.weekly_availability and len(self.weekly_availability) >= 1:
             score += 15
 
+        # Bio
         if self.achievements or self.specialties:
-            score += 10
+            score += 15
 
-        return score
+        return min(score, 100)
+
 
 class CoachVenue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -593,6 +595,9 @@ class Booking(db.Model):
     payment_intent_id = db.Column(db.String(255), nullable=True)
     venue_type = db.Column(db.String(20), default="coach_venue")
     student_address = db.Column(db.String(500), nullable=True)
+    payment_mode = db.Column(db.String(30), default="online")
+    payment_provider = db.Column(db.String(20), default="test")
+    payment_status = db.Column(db.String(20), default="pending")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1245,7 +1250,7 @@ def coach_detail(slug):
 @hirer_required
 def book_session(coach_id):
     coach = Coach.query.get_or_404(coach_id)
-    
+    payment_mode = request.form.get("payment_mode", "online")
     # Get form data
     sport = request.form.get("sport", "").strip()
     date_str = request.form.get("date", "").strip()
@@ -1369,8 +1374,10 @@ def book_session(coach_id):
     lock_until = datetime.utcnow() + timedelta(minutes=PAYMENT_LOCK_MINUTES)
     initial_status = "Payment Pending"
 
-    if price_per_session == 0:
-        initial_status = "Confirmed"
+    if payment_mode != "online" or price_per_session == 0:
+        flash("Booking request sent. Coach will confirm.", "success")
+        return redirect(url_for("coach_dashboard"))
+
 
     new_booking = Booking(
         coach_id=coach.id,
@@ -1380,11 +1387,13 @@ def book_session(coach_id):
         booking_time=time_result,
         venue_type=venue_type,
         student_address=sanitize_input(student_address, max_length=500),
-        location=sanitize_input(location, max_length=255),  # Using the resolved location
+        location=sanitize_input(location, max_length=255),
         message=sanitize_input(message, max_length=1000),
-        status=initial_status,
-        locked_until=lock_until
+        locked_until=lock_until,
+        payment_mode=payment_mode,
+        status="Pending" if payment_mode != "online" else "Payment Pending",
     )
+
 
     db.session.add(new_booking)
     db.session.commit()
@@ -1392,9 +1401,10 @@ def book_session(coach_id):
     # --- 7. Handle Payment / Completion ---
     
     # Free bookings – no payment needed
-    if price_per_session == 0:
-        flash("Booking confirmed!", "success")
+    if payment_mode != "online" or price_per_session == 0:
+        flash("Booking request sent. Coach will confirm.", "success")
         return redirect(url_for("coach_dashboard"))
+
 
     # Paid bookings - Create Stripe Session
     try:
@@ -1416,10 +1426,15 @@ def book_session(coach_id):
                 'booking_id': new_booking.id,
                 'type': 'coach_booking'
             },
-            success_url=url_for('coach_dashboard', _external=True) + "?payment=success",
+            success_url=url_for(
+                'booking_success',
+                booking_id=new_booking.id,
+                _external=True
+            ),
             cancel_url=url_for('coach_detail', slug=coach.slug, _external=True) + "?payment=cancelled",
         )
-        return redirect(checkout_session.url, code=303)
+        return redirect(url_for("payment_page", booking_id=new_booking.id))
+
 
     except Exception as e:
         logger.exception("Stripe Error")
@@ -1475,10 +1490,12 @@ def update_booking_status(booking_id):
                     f"Sport: {booking.sport}\n"
                     f"Date: {booking.booking_date.strftime('%d %b %Y')}\n"
                     f"Time: {booking.booking_time}\n"
-                    f"Location: {booking.location or 'Not specified'}\n\n"
+                    f"Location: {booking.location or 'Not specified'}\n"
+                    f"Payment Method: {booking.payment_mode.upper()}\n\n"
                     "You can see this session under 'My Schedule' in your dashboard.\n\n"
                     "- GameChanger"
                 )
+
             else:
                 subject = "Your GameChanger booking was updated"
                 body = (
@@ -1747,12 +1764,6 @@ def coach_dashboard():
         youtube_url = request.form.get("youtube_url", "").strip()
         linkedin_url = request.form.get("linkedin_url", "").strip()
         website_url = request.form.get("website_url", "").strip()
-
-        # NEW: venue fields
-        venue_name = (request.form.get("venue_name") or "").strip()
-        venue_address = (request.form.get("venue_address") or "").strip()
-        venue_map_url = (request.form.get("venue_map_url") or "").strip()
-
         # Validation flags
         valid = True
 
@@ -1764,12 +1775,6 @@ def coach_dashboard():
         if not city or len(city.strip()) < 2:
             flash("City is required.", "danger")
             valid = False
-
-        # Venue mandatory for coaches
-        if current_user.role == "coach":
-            if not venue_name or not venue_address or not venue_map_url:
-                flash("Please fill venue name, full address and Google Maps link.", "danger")
-                valid = False
 
         try:
             exp = int(exp_raw) if exp_raw else 0
@@ -1836,10 +1841,6 @@ def coach_dashboard():
                     achievements=sanitize_input(achievements),
                     travel_radius=travel_radius,
                     rating=0.0,
-                    # NEW: venue fields
-                    venue_name=sanitize_input(venue_name, max_length=120),
-                    venue_address=sanitize_input(venue_address, max_length=255),
-                    venue_map_url=sanitize_input(venue_map_url, max_length=255),
                     instagram_url=sanitize_input(instagram_url, max_length=255),
                     youtube_url=sanitize_input(youtube_url, max_length=255),
                     linkedin_url=sanitize_input(linkedin_url, max_length=255),
@@ -1863,10 +1864,6 @@ def coach_dashboard():
                 coach.profile_image = image_filename
                 coach.achievements = sanitize_input(achievements)
                 coach.travel_radius = travel_radius
-                # NEW: venue fields
-                coach.venue_name = sanitize_input(venue_name, max_length=120)
-                coach.venue_address = sanitize_input(venue_address, max_length=255)
-                coach.venue_map_url = sanitize_input(venue_map_url, max_length=255)
                 coach.instagram_url = sanitize_input(instagram_url, max_length=255)
                 coach.youtube_url = sanitize_input(youtube_url, max_length=255)
                 coach.linkedin_url = sanitize_input(linkedin_url, max_length=255)
@@ -2470,6 +2467,51 @@ def get_available_slots(coach_id):
                 available_slots.append(s)
 
     return jsonify({"slots": available_slots})
+@app.route("/booking/success/<int:booking_id>")
+@login_required
+def booking_success(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+
+    # Only the student who booked can see it
+    if booking.user_id != current_user.id:
+        abort(403)
+
+    return render_template("booking_success.html", booking=booking)
+@app.route("/payment/test/<int:booking_id>", methods=["POST"])
+@login_required
+def test_payment(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+
+    if booking.user_id != current_user.id:
+        abort(403)
+
+    # Simulate payment success
+    booking.payment_provider = "test"
+    booking.payment_status = "success"
+    booking.status = "Confirmed"
+    booking.locked_until = None
+
+    db.session.commit()
+
+    flash("Payment successful! Booking confirmed.", "success")
+    return redirect(url_for("booking_success", booking_id=booking.id))
+
+@app.route("/payment/<int:booking_id>")
+@login_required
+def payment_page(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+
+    # security check: only the student who booked can pay
+    if booking.user_id != current_user.id:
+        abort(403)
+
+    # if already paid / confirmed, don’t show payment page again
+    if booking.status == "Confirmed":
+        flash("This booking is already confirmed.", "info")
+        return redirect(url_for("coach_dashboard"))
+
+    return render_template("payment.html", booking=booking)
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()

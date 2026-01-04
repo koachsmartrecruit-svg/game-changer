@@ -132,16 +132,22 @@
         </div>
 
         <div id="coachVenueBox" class="mb-3">
-          <label class="fw-bold">Select Venue</label>
-          <select name="venue_id" class="form-select">
+        <label class="fw-bold">Select Venue</label>
+
+        {% if coach.venues and coach.venues|length > 0 %}
+          <select name="venue_id" class="form-select" required>
             {% for v in coach.venues %}
               <option value="{{ v.id }}">
                 {{ v.name }} – {{ v.address }}
               </option>
             {% endfor %}
           </select>
-        </div>
-
+        {% else %}
+          <div class="alert alert-warning small mt-2">
+            Coach has not added any venues yet.
+          </div>
+        {% endif %}
+      </div>
         <div id="studentAddressBox" class="mb-3 d-none">
           <label class="fw-bold">Your Address</label>
           <textarea name="student_address"
@@ -194,16 +200,18 @@
 </div>
 
 <script>
-
 function toggleVenueSelect(isCoachVenue) {
-  document.getElementById("coachVenueBox")
-    .classList.toggle("d-none", !isCoachVenue);
+  const venueBox = document.getElementById("coachVenueBox");
+  const addressBox = document.getElementById("studentAddressBox");
+  const venueSelect = venueBox.querySelector("select");
 
-  document.getElementById("studentAddressBox")
-    .classList.toggle("d-none", isCoachVenue);
+  venueBox.classList.toggle("d-none", !isCoachVenue);
+  addressBox.classList.toggle("d-none", isCoachVenue);
+
+  if (!isCoachVenue && venueSelect) {
+    venueSelect.selectedIndex = 0;
+  }
 }
-
-
 
 const dateInput = document.getElementById("bookingDate");
 const timeSelect = document.getElementById("timeSlotSelect");

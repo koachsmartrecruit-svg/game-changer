@@ -35,6 +35,91 @@
       </small>
     {% endif %}
   </div>
+  {% if coach and score < 100 %}
+  <div class="card border-0 rounded-4 mb-4">
+    <div class="card-header bg-light border-0">
+      <h6 class="fw-bold mb-0">Complete these steps</h6>
+      <small class="text-muted">Required to unlock bookings</small>
+    </div>
+
+    <div class="card-body">
+      <ul class="list-group list-group-flush small">
+
+        <li class="list-group-item d-flex justify-content-between">
+          Profile photo
+          {% if coach.profile_image and coach.profile_image != 'default_coach.jpg' %}
+            <span class="text-success">✓</span>
+          {% else %}
+            <span class="text-danger">Missing</span>
+          {% endif %}
+        </li>
+
+        <li class="list-group-item d-flex justify-content-between">
+          City & State
+          {% if coach.city and coach.state %}
+            <span class="text-success">✓</span>
+          {% else %}
+            <span class="text-danger">Missing</span>
+          {% endif %}
+        </li>
+
+        <li class="list-group-item d-flex justify-content-between">
+          Phone number
+          {% if coach.phone %}
+            <span class="text-success">✓</span>
+          {% else %}
+            <span class="text-danger">Missing</span>
+          {% endif %}
+        </li>
+
+        <li class="list-group-item d-flex justify-content-between">
+          Sports & pricing
+          {% set prices = coach.get_price_dict() %}
+          {% if prices and prices.values()|select('gt', 0)|list %}
+            <span class="text-success">✓</span>
+          {% else %}
+            <span class="text-danger">Missing</span>
+          {% endif %}
+        </li>
+
+        <li class="list-group-item d-flex justify-content-between">
+          Training venues
+          {% if coach.venues and coach.venues|length > 0 %}
+            <span class="text-success">✓</span>
+          {% else %}
+            <span class="text-danger">Missing</span>
+          {% endif %}
+        </li>
+
+        <li class="list-group-item d-flex justify-content-between">
+          Weekly availability
+          {% if coach.weekly_availability and coach.weekly_availability|length > 0 %}
+            <span class="text-success">✓</span>
+          {% else %}
+            <span class="text-danger">Missing</span>
+          {% endif %}
+        </li>
+
+        <li class="list-group-item d-flex justify-content-between">
+          Bio / Achievements
+          {% if coach.achievements or coach.specialties %}
+            <span class="text-success">✓</span>
+          {% else %}
+            <span class="text-danger">Missing</span>
+          {% endif %}
+        </li>
+
+      </ul>
+    </div>
+
+    <div class="card-footer bg-transparent text-end">
+      <a href="{{ url_for('coach_profile') }}"
+        class="btn btn-sm btn-outline-primary rounded-pill">
+        Complete Profile →
+      </a>
+    </div>
+  </div>
+  {% endif %}
 
 
   <div class="btn-group mb-4 shadow-sm">
