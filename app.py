@@ -823,7 +823,7 @@ def subscribe():
                     "Hi there,\n\n"
                     "Thanks for joining the GameChanger community! You're now on the list to receive "
                     "updates on top coaches, training tips, and exclusive offers.\n\n"
-                    "Ready to level up? Find your mentor today: "
+                    "Ready to level up? Find your Coach today: "
                     + url_for("coaches", _external=True)
                     + "\n\n"
                     "Best,\nThe GameChanger Team"
@@ -2296,7 +2296,7 @@ def chatbot():
             response += "\n"
         
         response += f"We have {total_coaches} coaches available, with {verified_coaches} verified professionals.\n\n"
-        response += "**Tip**: Use filters on the 'Find a Mentor' page to narrow down by sport, city, and price range!"
+        response += "**Tip**: Use filters on the 'Find a Coach' page to narrow down by sport, city, and price range!"
         
         return jsonify({"response": response, "type": "coach_selection"})
     
@@ -2323,7 +2323,7 @@ def chatbot():
     elif any(keyword in query for keyword in ["how booking", "booking works", "how to book", "book session", "booking process", "how do i book"]):
         response = "**How Booking Works:**\n\n"
         response += "**Step 1: Find a Coach**\n"
-        response += "• Browse coaches on the 'Find a Mentor' page\n"
+        response += "• Browse coaches on the 'Find a Coach' page\n"
         response += "• Filter by sport, city, and budget\n"
         response += "• Click on a coach to view their profile\n\n"
         
